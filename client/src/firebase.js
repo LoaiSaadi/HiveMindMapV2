@@ -2,7 +2,9 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-// TODO: Add SDKs for Firebase products that you want to use
+// import { auth } from "./firebase";
+
+// TODO: Add SDKs for Firebase products that you want to use 
 // https://firebase.google.com/docs/web/setup#available-libraries
 
 // Your web app's Firebase configuration
@@ -10,7 +12,7 @@ import { getFirestore } from "firebase/firestore";
 const firebaseConfig = {
   apiKey: "AIzaSyBOPd8Wbr02Qfc4-lAm0Yw8_hScThteHYo",
   authDomain: "mindmapapp-f4b64.firebaseapp.com",
-  databaseURL: "https://mindmapapp-f4b64-default-rtdb.firebaseio.com",
+  // databaseURL: "https://mindmapapp-f4b64-default-rtdb.firebaseio.com",
   projectId: "mindmapapp-f4b64",
   storageBucket: "mindmapapp-f4b64.firebasestorage.app",
   messagingSenderId: "177274587651",

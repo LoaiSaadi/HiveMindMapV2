@@ -8,6 +8,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Add a default route to handle GET requests to the root ("/") URL
+app.get("/", (req, res) => {
+  res.send("Welcome to the server!"); // This can be any message or a status page
+});
+
+
 app.use("/api", authRoutes);
 
 const PORT = 5000;

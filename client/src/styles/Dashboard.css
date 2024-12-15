@@ -1,0 +1,135 @@
+/* General layout and styling */
+.dashboard-container {
+    padding: 30px 50px; /* Added horizontal padding for spacing */
+    background-color: #f4f7f6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: 'Arial', sans-serif;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+h2 {
+    font-size: 1.5rem;
+    color: #4CAF50;
+    margin: 0;
+    font-weight: 200;
+}
+
+.logout-button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+}
+
+.new-map-form {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* Align items to the left */
+    margin-bottom: 30px;
+    width: 100%; /* Full width for better alignment control */
+}
+
+.new-map-input {
+    padding: 12px;
+    font-size: 1.1rem;
+    width: 300px; /* Consistent width */
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    margin-bottom: 15px;
+    transition: border 0.3s ease;
+}
+
+
+
+.create-map-button {
+    padding: 12px 24px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+    width: auto; /* Fit content naturally */
+}
+
+h3 {
+    font-size: 1.6rem;
+    margin-bottom: 20px;
+    
+    color: #4CAF50;
+    font-weight: 500;
+}
+
+.maps-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    max-width: 700px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.map-item {
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    cursor: pointer;
+}
+
+.map-item:hover {
+    background-color: #f0f0f0;
+    transform: translateY(-3px);
+}
+
+.map-button {
+    background-color: white;
+    color: #4CAF50;
+    border: none;
+    
+    font-size: 1.2rem;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+
+@media (max-width: 768px) {
+    .new-map-input {
+        width: 80%; /* Adjust for smaller screens */
+    }
+
+    .create-map-button,
+    .logout-button {
+        width: 80%;
+        font-size: 1rem;
+    }
+
+    .maps-list {
+        width: 100%;
+        max-width: 500px;
+    }
+
+    .map-item {
+        padding: 10px;
+    }
+}
