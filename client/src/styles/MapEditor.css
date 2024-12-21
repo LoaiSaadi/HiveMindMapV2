@@ -1,0 +1,91 @@
+.map-editor-container {
+    display: flex;
+    height: 100vh;
+    font-family: sans-serif;
+  }
+  
+  .map-editor-canvas {
+    flex: 1;
+    position: relative;
+    background: #f9f9f9;
+  }
+  
+  .map-editor-title {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(255,255,255,0.8);
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-weight: bold;
+    box-shadow: 0 0 5px rgba(0,0,0,0.1);
+  }
+  
+  /* Sidebar */
+  .map-editor-sidebar {
+    width: 250px;
+    background: #fff;
+    border-left: 1px solid #ddd;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+  
+  .map-editor-sidebar h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 18px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+  }
+  
+  /* Buttons */
+  .map-editor-sidebar button {
+    background: #e0e0e0;
+    border: none;
+    padding: 8px 12px;
+    margin-right: 10px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .map-editor-sidebar button:hover {
+    background: #ccc;
+  }
+  
+  .selected-nodes-area {
+    margin-top: 20px;
+    font-size: 14px;
+    color: #333;
+  }
+  .selected-nodes-area h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 14px;
+    font-weight: bold;
+  }
+  
+  /* Inputs */
+  .map-editor-sidebar label {
+    font-weight: bold;
+    display: block;
+    margin-top: 20px;
+    margin-bottom: 5px;
+  }
+  
+  .map-editor-sidebar input,
+  .map-editor-sidebar textarea {
+    width: 100%;
+    padding: 5px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    font-size: 14px;
+  }
+  
+  .map-editor-sidebar textarea {
+    height: 80px;
+    resize: vertical;
+  }
+  
