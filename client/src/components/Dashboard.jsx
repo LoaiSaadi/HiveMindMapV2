@@ -241,21 +241,21 @@ const handleProfileUpdate = async (e) => {
   };
 
   const joinMap = async (e) => {
-    e.preventDefault();
-    if (!joinMapName.trim()) return;
-    try {
-      const mapToJoin = maps.find(map => map.name === joinMapName);
-      if (mapToJoin) {
-        setSelectedMapId(mapToJoin.id);
-        console.log("Joined map:", mapToJoin.name);
-      } else {
-        console.log("Map not found!");
-      }
-      setJoinMapName("");
-      setIsJoinInputVisible(false);
-    } catch (err) {
-      console.error("Error joining map:", err.message);
-    }
+    // e.preventDefault();
+    // if (!joinMapName.trim()) return;
+    // try {
+    //   const mapToJoin = maps.find(map => map.name === joinMapName);
+    //   if (mapToJoin) {
+    //     setSelectedMapId(mapToJoin.id);
+    //     console.log("Joined map:", mapToJoin.name);
+    //   } else {
+    //     console.log("Map not found!");
+    //   }
+    //   setJoinMapName("");
+    //   setIsJoinInputVisible(false);
+    // } catch (err) {
+    //   console.error("Error joining map:", err.message);
+    // }
   };
 
   const handleLogout = async () => {

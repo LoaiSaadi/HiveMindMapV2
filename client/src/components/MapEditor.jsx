@@ -1,170 +1,4 @@
-// import React, { useState, useCallback, useEffect } from "react";
-// import ReactFlow, {
-//   addEdge,
-//   ReactFlowProvider,
-//   useEdgesState,
-//   useNodesState,
-// } from "reactflow";
-// import "reactflow/dist/style.css";
-// import { doc, updateDoc, getDoc } from "firebase/firestore"; // Import Firestore functions
-// import { db } from "../firebase"; // Your Firebase db
-
-// const initialNodes = [
-//   { id: "1", data: { label: "Node 1" }, position: { x: 250, y: 5 } },
-// ];
-
-// const initialEdges = [];
-
-// const MapEditor = ({ mapId }) => {
-//   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-//   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-//   const [nodeId, setNodeId] = useState(2); // To generate unique IDs for new nodes
-//   const [selectedNodes, setSelectedNodes] = useState([]); // Store selected nodes for edge creation
-//   const [mapName, setMapName] = useState(""); // State for map name
-//   const [mapDescription, setMapDescription] = useState(""); // State for map description
-
-//   // Load existing map data when the component mounts
-//   useEffect(() => {
-//     const loadMapData = async () => {
-//       if (mapId) {
-//         const mapRef = doc(db, "maps", mapId);
-//         const mapSnapshot = await getDoc(mapRef);
-//         if (mapSnapshot.exists()) {
-//           const mapData = mapSnapshot.data();
-//           setMapName(mapData.name);
-//           setMapDescription(mapData.description || "");
-//           setNodes(mapData.nodes || initialNodes);
-//           setEdges(mapData.edges || initialEdges);
-//         }
-//       }
-//     };
-
-//     loadMapData();
-//   }, [mapId]);
-
-//   // Function to add a new node
-//   const addNode = useCallback(() => {
-//     const newNode = {
-//       id: nodeId.toString(),
-//       data: { label: `Node ${nodeId}` },
-//       position: { x: Math.random() * 400, y: Math.random() * 400 },
-//     };
-//     setNodes((nds) => [...nds, newNode]);
-//     setNodeId((id) => id + 1);
-//   }, [nodeId, setNodes]);
-
-//   // Function to handle node click for selecting nodes to connect
-//   const onNodeClick = useCallback(
-//     (event, node) => {
-//       setSelectedNodes((prev) => {
-//         if (prev.length === 2) return [node]; // Reset selection if two nodes are already selected
-//         if (prev.find((n) => n.id === node.id)) return prev; // Avoid duplicates
-//         return [...prev, node];
-//       });
-//     },
-//     [setSelectedNodes]
-//   );
-
-//   // Function to add a new edge between selected nodes
-//   const addEdgeHandler = useCallback(() => {
-//     if (selectedNodes.length === 2) {
-//       const newEdge = {
-//         id: `e${selectedNodes[0].id}-${selectedNodes[1].id}`,
-//         source: selectedNodes[0].id,
-//         target: selectedNodes[1].id,
-//         markerEnd: { type: "arrow" }, // Add arrow marker to edge
-//       };
-//       setEdges((eds) => addEdge(newEdge, eds));
-//       setSelectedNodes([]); // Reset selection after adding the edge
-//     } else {
-//       alert("Please select two nodes to connect.");
-//     }
-//   }, [selectedNodes, setEdges]);
-
-//   // Save map data to Firebase
-//   const saveMap = async () => {
-//     if (!mapName.trim()) return alert("Map name is required.");
-//     const mapRef = doc(db, "maps", mapId);
-//     await updateDoc(mapRef, {
-//       name: mapName,
-//       description: mapDescription,
-//       nodes,
-//       edges,
-//     });
-//     alert("Map saved successfully!");
-//   };
-
-//   return (
-//     <div style={{ width: "100%", height: "100vh", display: "flex" }}>
-//       {/* React Flow Canvas */}
-//       <div style={{ width: "80%", height: "100%" }}>
-//         <ReactFlow
-//           nodes={nodes}
-//           edges={edges}
-//           onNodesChange={onNodesChange}
-//           onEdgesChange={onEdgesChange}
-//           onNodeClick={onNodeClick} // Handle node click for selection
-//           fitView
-//         />
-//       </div>
-
-//       {/* Control Panel */}
-//       <div style={{ width: "20%", padding: "10px", background: "#f4f4f4" }}>
-//         <h3>Map Details</h3>
-//         <button onClick={addNode} style={{ marginBottom: "10px" }}>
-//           Add Node
-//         </button>
-//         <button onClick={addEdgeHandler}>Add Edge</button>
-
-//         <div style={{ marginTop: "20px" }}>
-//           <h4>Selected Nodes</h4>
-//           {selectedNodes.map((node) => (
-//             <div key={node.id}>Node {node.id}</div>
-//           ))}
-//         </div>
-
-//         {/* Map Info Section */}
-//         <div>
-          
-//           <div>
-//             <label>Map Name:</label>
-//             <input
-//               type="text"
-//               value={mapName}
-//               onChange={(e) => setMapName(e.target.value)}
-//               placeholder="Enter map name"
-//               style={{ width: "100%", marginBottom: "10px" }}
-//             />
-//           </div>
-//           <div>
-//             <label>Map Description:</label>
-//             <textarea
-//               value={mapDescription}
-//               onChange={(e) => setMapDescription(e.target.value)}
-//               placeholder="Enter map description"
-//               style={{ width: "100%", height: "100px" }}
-//             />
-//           </div>
-//           <button onClick={saveMap} style={{ marginTop: "20px" }}>
-//             Save Map
-//           </button>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// // React Flow Provider Wrapper
-// const MapEditorWithParams = ({ mapId }) => (
-//   <ReactFlowProvider>
-//     <MapEditor mapId={mapId} />
-//   </ReactFlowProvider>
-// );
-
-
-// export default MapEditorWithParams;
-// Import necessary modules
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react"; 
 import ReactFlow, {
   addEdge,
   applyNodeChanges,
@@ -194,78 +28,111 @@ const initialEdges = [];
 const MapEditor = ({ mapId }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [nodeId, setNodeId] = useState(2); // Track next node ID
+  const [nodeId, setNodeId] = useState(2);
   const [mapName, setMapName] = useState("");
   const [mapDescription, setMapDescription] = useState("");
-  const [selectedElements, setSelectedElements] = useState([]); // Track selected elements
+  const [selectedElements, setSelectedElements] = useState([]);
+  const [firebaseInitialized, setFirebaseInitialized] = useState(false);
+  const [mapCreator, setMapCreator] = useState(""); // To store the creator's username
+  const [lastEdited, setLastEdited] = useState(""); // To store the last edited timestamp
+
+  // Refs to track previous state
+  const prevNodesRef = useRef(nodes);
+  const prevEdgesRef = useRef(edges);
 
   const navigate = useNavigate();
+  // Ref to store previous data from Firebase to compare and avoid unnecessary updates
+  const prevMapDataRef = useRef(null);
 
-  // Update Firebase in real-time
-  const updateFirebase = useCallback((newNodes, newEdges) => {
-    const mapRef = doc(db, "maps", mapId);
-    updateDoc(mapRef, {
-      nodes: newNodes,
-      edges: newEdges,
-      name: mapName,
-      description: mapDescription,
-    });
-  }, [mapId, mapName, mapDescription]);
+  const updateFirebase = useCallback(
+    (newNodes, newEdges) => {
+      if (!firebaseInitialized) return; // Avoid updating Firebase before initialization
+      console.log("Updating Firebase with nodes:", newNodes);
+      console.log("Edges:", newEdges);
+      // Only update if nodes or edges have actually changed
+      if (JSON.stringify(newNodes) !== JSON.stringify(prevNodesRef.current) || 
+          JSON.stringify(newEdges) !== JSON.stringify(prevEdgesRef.current)) {
+        const mapRef = doc(db, "maps", mapId);
+        updateDoc(mapRef, {
+          nodes: newNodes,
+          edges: newEdges,
+          name: mapName,
+          description: mapDescription,
+          lastEdited: new Date(),
+        }).catch((err) => console.error("Firebase update failed:", err));
+        
+        // Update refs to current values
+        prevNodesRef.current = newNodes;
+        prevEdgesRef.current = newEdges;
+      }
+    },
+    [firebaseInitialized, mapId, mapName, mapDescription]
+  );
 
-  // Handle connection
   const onConnect = useCallback(
     (params) => {
       setEdges((eds) => {
         const updatedEdges = addEdge(params, eds);
-        updateFirebase(nodes, updatedEdges);
+        updateFirebase(nodes, updatedEdges); // update Firebase only when there's a real change
         return updatedEdges;
       });
-      socket.emit("edge-added", params); // Emit the edge to other clients
+      socket.emit("edge-added", params);
     },
     [nodes, updateFirebase]
   );
 
-  // Handle node changes (removal or updates)
+  const handleSelectionChange = useCallback((elements) => {
+    const newSelectedElements = elements && Array.isArray(elements) ? elements.map((el) => el.id) : [];
+    
+    // Only update state if selected elements have changed
+    if (JSON.stringify(newSelectedElements) !== JSON.stringify(selectedElements)) {
+      setSelectedElements(newSelectedElements);
+    }
+  }, [selectedElements]);
+
   const handleNodeChanges = useCallback(
     (changes) => {
       setNodes((nds) => {
         const updatedNodes = applyNodeChanges(changes, nds);
-        updateFirebase(updatedNodes, edges);
+        updateFirebase(updatedNodes, edges); // update Firebase only when there's a real change
         return updatedNodes;
       });
     },
     [edges, updateFirebase]
   );
 
-  // Handle edge changes (removal or updates)
   const handleEdgeChanges = useCallback(
     (changes) => {
       setEdges((eds) => {
         const updatedEdges = applyEdgeChanges(changes, eds);
-        updateFirebase(nodes, updatedEdges);
+        updateFirebase(nodes, updatedEdges); // update Firebase only when there's a real change
         return updatedEdges;
       });
     },
     [nodes, updateFirebase]
   );
 
-  // Add new node
   const addNode = useCallback(() => {
+    console.log("Adding Node with ID:", nodeId);
+    const newNodeId = nodes.length ? Math.max(...nodes.map((node) => parseInt(node.id))) + 1 : 1;
+
     const newNode = {
-      id: nodeId.toString(),
-      data: { label: `Node ${nodeId}` },
+      id: newNodeId.toString(),
+      data: { label: `Node ${newNodeId}` },
       position: { x: Math.random() * 400, y: Math.random() * 400 },
     };
+    console.log("New Node Created:", newNode);
     setNodes((nds) => {
+      
       const updatedNodes = [...nds, newNode];
-      updateFirebase(updatedNodes, edges);
+      console.log("Updated Nodes:", updatedNodes);
+      updateFirebase(updatedNodes, edges); // update Firebase only when there's a real change
       return updatedNodes;
     });
-    setNodeId((id) => id + 1); // Increment nodeId
-    socket.emit("node-added", newNode); // Emit new node to server
+    setNodeId((id) => id + 1);
+    socket.emit("node-added", newNode);
   }, [nodeId, edges, updateFirebase]);
 
-  // Handle double click to rename node with inline input
   const onNodeDoubleClick = useCallback(
     (event, node) => {
       const newLabel = window.prompt("Enter new label for the node:", node.data.label);
@@ -274,42 +141,54 @@ const MapEditor = ({ mapId }) => {
           const updatedNodes = nds.map((n) =>
             n.id === node.id ? { ...n, data: { ...n.data, label: newLabel } } : n
           );
-          updateFirebase(updatedNodes, edges);
+          updateFirebase(updatedNodes, edges); // update Firebase only when there's a real change
           return updatedNodes;
         });
-        socket.emit("node-renamed", { id: node.id, label: newLabel }); // Emit renamed node to server
+        socket.emit("node-renamed", { id: node.id, label: newLabel });
       }
     },
     [edges, updateFirebase]
   );
 
-  // Handle element deletion
   const onDelete = useCallback(() => {
     const remainingNodes = nodes.filter((node) => !selectedElements.includes(node.id));
     const remainingEdges = edges.filter((edge) => !selectedElements.includes(edge.id));
     setNodes(remainingNodes);
     setEdges(remainingEdges);
-    setSelectedElements([]); // Clear selection
-    updateFirebase(remainingNodes, remainingEdges); // Save updated map
-    socket.emit("elements-deleted", selectedElements); // Emit deleted elements to server
+    setSelectedElements([]);
+    updateFirebase(remainingNodes, remainingEdges); // update Firebase only when there's a real change
+    socket.emit("elements-deleted", selectedElements);
   }, [nodes, edges, selectedElements, updateFirebase]);
 
-  // Load map data in real-time
   useEffect(() => {
     const mapRef = doc(db, "maps", mapId);
 
     const unsubscribe = onSnapshot(mapRef, (doc) => {
       if (doc.exists()) {
         const mapData = doc.data();
-        setNodes(mapData.nodes || []);
-        setEdges(mapData.edges || []);
-        setMapName(mapData.name || "");
-        setMapDescription(mapData.description || "");
+
+        // Check if map data is different before updating state
+        if (
+          !prevMapDataRef.current ||
+          JSON.stringify(prevMapDataRef.current.nodes) !== JSON.stringify(mapData.nodes) ||
+          JSON.stringify(prevMapDataRef.current.edges) !== JSON.stringify(mapData.edges) ||
+          prevMapDataRef.current.name !== mapData.name ||
+          prevMapDataRef.current.description !== mapData.description
+        ) {
+          setNodes(mapData.nodes || []);
+          setEdges(mapData.edges || []);
+          setMapName(mapData.name || "");
+          setMapDescription(mapData.description || "");
+          setLastEdited(mapData.lastEdited?.toDate().toLocaleString() || "Not available");
+          setMapCreator(mapData.creator || "Unknown");
+          setFirebaseInitialized(true); // Firebase data is now loaded
+          prevMapDataRef.current = mapData; // Update ref with new data
+        }
       }
     });
 
     return () => unsubscribe();
-  }, [mapId]);
+  }, [mapId]); // Only re-run when mapId changes
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -328,18 +207,12 @@ const MapEditor = ({ mapId }) => {
         <ReactFlow
           nodes={nodes}
           edges={edges}
-          onNodesChange={handleNodeChanges} // Handle node changes
-          onEdgesChange={handleEdgeChanges} // Handle edge changes
-          onConnect={onConnect} // Handle edge connections
-          onSelectionChange={(elements) =>
-            setSelectedElements(
-              elements && Array.isArray(elements)
-                ? elements.map((el) => el.id)
-                : []
-            )
-          } // Track selected elements
-          onNodeDoubleClick={onNodeDoubleClick} // Handle node renaming
-          selectNodesOnDrag // Enables selection by dragging a rectangle
+          onNodesChange={handleNodeChanges}
+          onEdgesChange={handleEdgeChanges}
+          onConnect={onConnect}
+          onSelectionChange={handleSelectionChange} // Use the optimized selection handler
+          onNodeDoubleClick={onNodeDoubleClick}
+          selectNodesOnDrag
           fitView
         />
       </div>
@@ -347,31 +220,35 @@ const MapEditor = ({ mapId }) => {
       <div style={{ width: "20%", padding: "10px", background: "#f4f4f4" }}>
         <h3>Map Details</h3>
         <button onClick={addNode} style={{ marginBottom: "10px" }}>Add Node</button>
-        <button onClick={onDelete} style={{ marginBottom: "10px" }}>Delete Selected</button>
+        {/* <button onClick={onDelete} style={{ marginBottom: "10px" }}>Delete Selected</button> */}
         <div>
-          <label>Map Name:</label>
+          <label style={{ color: "#388e3c" }}>Map Name:</label>
           <input
             type="text"
             value={mapName}
-            onChange={(e) => {
-              setMapName(e.target.value);
-              updateFirebase(nodes, edges);
-            }}
+            onChange={(e) => setMapName(e.target.value)}
+            onBlur={() => updateFirebase(nodes, edges)}
             placeholder="Enter map name"
             style={{ width: "100%", marginBottom: "10px" }}
           />
         </div>
         <div>
-          <label>Map Description:</label>
+          <label style={{ color: "#388e3c" }}>Map Description:</label>
           <textarea
             value={mapDescription}
-            onChange={(e) => {
-              setMapDescription(e.target.value);
-              updateFirebase(nodes, edges);
-            }}
+            onChange={(e) => setMapDescription(e.target.value)}
+            onBlur={() => updateFirebase(nodes, edges)}
             placeholder="Enter map description"
             style={{ width: "100%", height: "100px" }}
           />
+        </div>
+        <div>
+          <label style={{ color: "#388e3c" }}>Map ID:</label>
+          <p>{mapId}</p>
+        </div>
+        <div>
+          <label style={{ color: "#388e3c" }}>Last Edited:</label>
+          <p>{lastEdited}</p>
         </div>
       </div>
     </div>
