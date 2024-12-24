@@ -140,18 +140,31 @@ useEffect(() => {
 
 const handleFileChange = async (e) => {
   const file = e.target.files[0];
-  if (file && file.type.startsWith("image/")) {
-    try {
-      const storageRef = ref(storage, `profilePictures/${user.uid}_${file.name}`);
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
-      setProfilePicture(url);
-    } catch (error) {
-      console.error("Error uploading image: ", error);
-      setError("Failed to upload the image. Please try again.");
-    }
-  } else {
-    setError("Please upload a valid image file.");
+
+  if (!file) {
+    setError("No file selected.");
+    return;
+  }
+
+  // Validate file type and extension
+  const validExtensions = [".jpg"];
+  const fileName = file.name.toLowerCase();
+  const isValidExtension = validExtensions.some((ext) => fileName.endsWith(ext));
+
+  if (!isValidExtension) {
+    setError("Please upload a valid .jpg image file.");
+    return;
+  }
+
+  try {
+    const storageRef = ref(storage, `profilePictures/${user.uid}_${file.name}`);
+    await uploadBytes(storageRef, file);
+    const url = await getDownloadURL(storageRef);
+    setProfilePicture(url);
+    setError("");
+  } catch (error) {
+    console.error("Error uploading image:", error);
+    setError("Failed to upload the image. Please try again.");
   }
 };
 const handleProfileUpdate = async (e) => {

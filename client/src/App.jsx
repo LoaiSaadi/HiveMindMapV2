@@ -89,83 +89,84 @@
 //   return <MapEditor mapId={mapId} />;
 // };
 
-// export default App;
 import React, { useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom"; // Fixed import
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import LoginPage from "./components/LoginPage";
 import Dashboard from "./components/Dashboard";
+import MapEditor from "./components/MapEditor";
 import { auth } from "./firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import MapEditor from "./components/MapEditor";
-import { useParams } from "react-router-dom"; // Import useParams hook
-import io from "socket.io-client"; // Import Socket.IO client
+import { useParams } from "react-router-dom";
+import io from "socket.io-client";
 
-const socket = io("http://localhost:5000"); // Assuming your Socket.IO server is running on port 5000
+// Setup Socket.IO client
+const socket = io("http://localhost:5000");
 
 const App = () => {
   const [user, setUser] = useState(null);
 
+  // Handle authentication and Socket.IO setup
   useEffect(() => {
+    console.log("Initializing App...");
+
+    // Firebase auth listener
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      if (currentUser) {
+        console.log("User logged in:", currentUser);
+      } else {
+        console.log("No user is logged in.");
+      }
     });
 
-    // Setup Socket.IO events
+    // Socket.IO connection setup
     socket.on("connect", () => {
-      console.log("Socket connected:", socket.id); // Log when connected to the server
+      console.log("Socket connected with ID:", socket.id);
     });
 
-    // Example event listener (you can replace with your own events)
     socket.on("mapUpdate", (data) => {
-      console.log("Map updated:", data); // Handle the map update event
+      console.log("Map update received via socket:", data);
     });
 
-    // Clean up the socket connection when the component is unmounted
+    // Clean up listeners on unmount
     return () => {
       socket.off("connect");
       socket.off("mapUpdate");
-      unsubscribe(); // Clean up the Firebase listener as well
+      unsubscribe();
     };
   }, []);
-  console.log("step -2");
-  
-  const handleLogin = () => {
-    console.log("step -1");
-    console.log("Navigating to Dashboard - User Data:", user);
-    // This function can be used to handle login state change or redirect after login
-    console.log("User logged in");
-  };
 
+  // Redirect to login if user is not authenticated
   if (!user) {
-    console.log("step 0");
-    return <LoginPage onLogin={handleLogin} />; // Pass onLogin as a prop
+    console.log("No user authenticated. Redirecting to login...");
+    return <LoginPage onLogin={() => console.log("Login triggered")} />;
   }
 
   return (
     <BrowserRouter>
       <Routes>
-        console.log("step 1");
-        console.log("Navigating to Dashboard - User Data:", user);
+        {/* Dashboard Route */}
         <Route path="/" element={<DashboardWrapper user={user} />} />
+
+        {/* Map Editor Route */}
         <Route path="/map/:mapId" element={<MapEditorWithParams />} />
       </Routes>
     </BrowserRouter>
   );
 };
 
-// Wrapper for Dashboard to pass props
+// Dashboard Wrapper Component (passes user to Dashboard)
 const DashboardWrapper = ({ user }) => {
   useEffect(() => {
-    console.log("Everything is working correctly");
-    console.log("Navigating to Dashboard - User Data:", user); // This will log user data whenever the DashboardWrapper is rendered
-    console.log("Everything is working correctly"); // This will log a note to check if everything works
+    console.log("Dashboard rendered with user:", user);
   }, [user]);
+
   return <Dashboard user={user} />;
 };
 
-// MapEditorWithParams component to fetch mapId from URL and pass it to MapEditor
+// Map Editor with URL params
 const MapEditorWithParams = () => {
-  const { mapId } = useParams(); // Extract mapId from URL params
+  const { mapId } = useParams(); // Extract mapId from URL
   return <MapEditor mapId={mapId} />;
 };
 
