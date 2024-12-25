@@ -390,7 +390,20 @@ const Dashboard = ({ user }) => {
                 placeholder="Enter map ID"
                 className="new-map-input"
               />
-              {joinSuccessMessage && <p className="success-text">{joinSuccessMessage}</p>}
+              {/* {joinSuccessMessage && <p className="success-text">{joinSuccessMessage}</p>} */}
+              {joinSuccessMessage && (
+              <div className="modal">
+                <div className="modal-content">
+                  <p>{joinSuccessMessage}</p>
+                  <button
+                    className="close-button"
+                    onClick={() => setJoinSuccessMessage("")}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            )}
               {error && <p className="error-text">{error}</p>}
               <div className="modal-buttons">
                 <button type="submit" className="card-button">

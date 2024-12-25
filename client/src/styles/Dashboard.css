@@ -90,6 +90,19 @@
     text-align: center;
   }
   
+  .close-button {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  
+  .close-button:hover {
+    background: #0056b3;
+  }
   
 .form-group {
     margin-bottom: 15px;

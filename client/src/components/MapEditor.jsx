@@ -20,6 +20,8 @@ const initialNodes = [
     id: "1",
     data: { label: "Node 1" },
     position: { x: 250, y: 5 },
+    style: { border: "2px solid #000000" },
+    
   },
 ];
 
@@ -35,6 +37,10 @@ const MapEditor = ({ mapId }) => {
   const [firebaseInitialized, setFirebaseInitialized] = useState(false);
   const [mapCreator, setMapCreator] = useState(""); // To store the creator's username
   const [lastEdited, setLastEdited] = useState(""); // To store the last edited timestamp
+  const [selectedNode, setSelectedNode] = useState(null); // To store the currently selected node
+  const [borderColor, setBorderColor] = useState("#000000"); // Default border color
+  const [textColor, setTextColor] = useState("#000000");
+  
 
   // Refs to track previous state
   const prevNodesRef = useRef(nodes);
@@ -43,6 +49,11 @@ const MapEditor = ({ mapId }) => {
   const navigate = useNavigate();
   // Ref to store previous data from Firebase to compare and avoid unnecessary updates
   const prevMapDataRef = useRef(null);
+
+    // Function to refresh the page
+    const refreshPage = () => {
+      window.location.reload();
+    };
 
   const updateFirebase = useCallback(
     (newNodes, newEdges) => {
@@ -120,6 +131,7 @@ const MapEditor = ({ mapId }) => {
       id: newNodeId.toString(),
       data: { label: `Node ${newNodeId}` },
       position: { x: Math.random() * 400, y: Math.random() * 400 },
+      style: { border: `2px solid ${borderColor}` }, 
     };
     console.log("New Node Created:", newNode);
     setNodes((nds) => {
@@ -131,7 +143,7 @@ const MapEditor = ({ mapId }) => {
     });
     setNodeId((id) => id + 1);
     socket.emit("node-added", newNode);
-  }, [nodeId, edges, updateFirebase]);
+  }, [nodeId, edges, updateFirebase , borderColor]);
 
   const onNodeDoubleClick = useCallback(
     (event, node) => {
@@ -201,6 +213,31 @@ const MapEditor = ({ mapId }) => {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onDelete]);
 
+
+  // Handle node click to select it
+  const onNodeClick = useCallback((event, node) => {
+    setSelectedNode(node); // Set the selected node
+    setBorderColor(node.style?.border?.split(" ")[2] || "#000000"); // Extract the current border color
+  }, []);
+
+  // Update the selected node's border color
+  const handleBorderColorChange = (color) => {
+    if (selectedNode) {
+      const updatedNodes = nodes.map((node) =>
+        node.id === selectedNode.id
+          ? { ...node, style: { ...node.style, border: `2px solid ${color}` } }
+          : node
+      );
+      setNodes(updatedNodes);
+      setBorderColor(color);
+      updateFirebase(updatedNodes, edges); // Update Firebase with the new color
+    }
+  };
+
+
+
+  
+
   return (
     <div style={{ width: "100%", height: "100vh", display: "flex" }}>
       <div style={{ width: "80%", height: "100%" }}>
@@ -209,7 +246,11 @@ const MapEditor = ({ mapId }) => {
           edges={edges}
           onNodesChange={handleNodeChanges}
           onEdgesChange={handleEdgeChanges}
-          onConnect={onConnect}
+          
+          onConnect={(params) => setEdges((eds) => addEdge(params, eds))}
+          
+          
+          onNodeClick={onNodeClick} // Handle node click
           onSelectionChange={handleSelectionChange} // Use the optimized selection handler
           onNodeDoubleClick={onNodeDoubleClick}
           selectNodesOnDrag
@@ -219,8 +260,12 @@ const MapEditor = ({ mapId }) => {
 
       <div style={{ width: "20%", padding: "10px", background: "#f4f4f4" }}>
         <h3>Map Details</h3>
+        
         <button onClick={addNode} style={{ marginBottom: "10px" }}>Add Node</button>
         {/* <button onClick={onDelete} style={{ marginBottom: "10px" }}>Delete Selected</button> */}
+        <button onClick={refreshPage} style={{ marginBottom: "10px" }}>
+          Home Page
+        </button>
         <div>
           <label style={{ color: "#388e3c" }}>Map Name:</label>
           <input
@@ -250,6 +295,19 @@ const MapEditor = ({ mapId }) => {
           <label style={{ color: "#388e3c" }}>Last Edited:</label>
           <p>{lastEdited}</p>
         </div>
+        {/* Color Picker for Selected Node's Border */}
+        {selectedNode && (
+          <div>
+            <label>Selected Node Border Color:</label>
+            <input
+              type="color"
+              value={borderColor}
+              onChange={(e) => handleBorderColorChange(e.target.value)} // Change border color
+              style={{ width: "100%" }}
+            />
+          </div>
+        )}
+        
       </div>
     </div>
   );
