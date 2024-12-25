@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { collection, addDoc, onSnapshot, doc, deleteDoc, query, where, getDocs, updateDoc, setDoc } from "firebase/firestore";
+import { collection, addDoc, onSnapshot, doc, deleteDoc, query, where, getDocs, updateDoc, setDoc, arrayUnion, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import MapEditor from "./MapEditor";
 import { signOut, updateProfile } from "firebase/auth";
@@ -15,6 +15,7 @@ const Dashboard = ({ user }) => {
   const [selectedMapId, setSelectedMapId] = useState(null);
   const [newMapName, setNewMapName] = useState("");
   const [joinMapName, setJoinMapName] = useState("");
+  const [joinMapId, setJoinMapId] = useState("");
   const [isCreateInputVisible, setIsCreateInputVisible] = useState(false);
   const [isJoinInputVisible, setIsJoinInputVisible] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState({ isVisible: false, mapId: null, mapName: "" });
@@ -24,177 +25,122 @@ const Dashboard = ({ user }) => {
   const [profilePicture, setProfilePicture] = useState(user.photoURL || "");
   const [email, setEmail] = useState(user.email || "");
   const [error, setError] = useState("");
-
+  const [joinSuccessMessage, setJoinSuccessMessage] = useState("");
 
   const navigate = useNavigate();
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
     const colRef = collection(db, "maps");
-    const unsubscribe = onSnapshot(colRef, (snapshot) => {
-      const allMaps = [];
-    const q = query(colRef, where("userId", "==", user.uid));
+    const q = query(colRef, where("participants", "array-contains", user.uid));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const userMaps = [];
       snapshot.forEach((doc) => {
-        allMaps.push({ id: doc.id, ...doc.data() });
         userMaps.push({ id: doc.id, ...doc.data() });
       });
-      setMaps(allMaps);
       setMaps(userMaps);
     });
     return () => unsubscribe();
-  }, []);
   }, [user.uid]);
 
+  useEffect(() => {
+    const checkUserInDatabase = async () => {
+      try {
+        const userRef = doc(db, "users", user.uid);
+        const userDoc = await getDocs(query(collection(db, "users"), where("uid", "==", user.uid)));
+        
+        if (userDoc.empty) {
+          await setDoc(userRef, {
+            uid: user.uid,
+            email: user.email,
+            username: user.displayName || "",
+            profilePicture: user.photoURL || "",
+            createdAt: new Date().toISOString(),
+          });
+        } else {
+          await updateDoc(userRef, {
+            email: user.email,
+            username: user.displayName || username,
+            profilePicture: user.photoURL || profilePicture,
+          });
+        }
+      } catch (error) {
+        console.error("Error checking user in database: ", error);
+      }
+    };
 
-//   useEffect(() => {
-//     // console.log("Dashboard rendered!");
-//     // const newSocket = io('http://localhost:5000');
-//     // setSocket(newSocket);
-//     // newSocket.on('newMapCreated', (newMap) => {
-//     //   setMaps((prevMaps) => [...prevMaps, newMap]);
-//     //   console.log('New map created:', newMap);
-//     // });
-//   //   return () => {
-//   //     newSocket.disconnect();
-//   //   };
-//   // }, []);
-//   const checkUserInDatabase = async () => {
-//     try {
-//       const userRef = doc(db, "users", user.uid);
-//       const userDoc = await getDocs(query(collection(db, "users"), where("uid", "==", user.uid)));
-//       if (userDoc.empty) {
-//         await setDoc(userRef, {
-//           uid: user.uid,
-//           email: user.email,
-//           username: user.displayName || "",
-//           profilePicture: user.photoURL || "",
-//           createdAt: new Date().toISOString()
-//         });
-//       } else {
-//         // Optionally, update user details if necessary
-//         await updateDoc(userRef, {
-//           email: user.email,
-//           username: user.displayName || username,
-//           profilePicture: user.photoURL || profilePicture
-//         });
-//       }
-//     } catch (error) {
-//       console.error("Error checking user in database: ", error);
-//     }
-//   };
-//   checkUserInDatabase();
-// }, [user]);
+    const newSocket = io('http://localhost:5000');
+    setSocket(newSocket);
 
+    newSocket.on('newMapCreated', (newMap) => {
+      setMaps((prevMaps) => [...prevMaps, newMap]);
+      console.log('New map created:', newMap);
+    });
 
-useEffect(() => {
-  const checkUserInDatabase = async () => {
+    checkUserInDatabase();
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, [user]);
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+
+    if (!file) {
+      setError("No file selected.");
+      return;
+    }
+
+    const validExtensions = [".jpg"];
+    const fileName = file.name.toLowerCase();
+    const isValidExtension = validExtensions.some((ext) => fileName.endsWith(ext));
+
+    if (!isValidExtension) {
+      setError("Please upload a valid .jpg image file.");
+      return;
+    }
+
     try {
-      // Check if the user exists in the database
-      const userRef = doc(db, "users", user.uid);
-      const userDoc = await getDocs(query(collection(db, "users"), where("uid", "==", user.uid)));
-      
-      if (userDoc.empty) {
-        // If the user doesn't exist, create a new user document
-        await setDoc(userRef, {
-          uid: user.uid,
-          email: user.email,
-          username: user.displayName || "",
-          profilePicture: user.photoURL || "",
-          createdAt: new Date().toISOString(),
-        });
-      } else {
-        // Optionally, update user details if necessary
-        await updateDoc(userRef, {
-          email: user.email,
-          username: user.displayName || username,
-          profilePicture: user.photoURL || profilePicture,
-        });
-      }
+      const storageRef = ref(storage, `profilePictures/${user.uid}_${file.name}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      setProfilePicture(url);
+      setError("");
     } catch (error) {
-      console.error("Error checking user in database: ", error);
+      console.error("Error uploading image:", error);
+      setError("Failed to upload the image. Please try again.");
     }
   };
 
-  // Initialize socket connection
-  const newSocket = io('http://localhost:5000');
-  setSocket(newSocket);
-
-  // Listen for new map creation
-  newSocket.on('newMapCreated', (newMap) => {
-    setMaps((prevMaps) => [...prevMaps, newMap]);
-    console.log('New map created:', newMap);
-  });
-
-  // Check the user in the database
-  checkUserInDatabase();
-
-  // Clean up on unmount
-  return () => {
-    newSocket.disconnect();
-  };
-}, [user]); // This will trigger whenever 'user' changes
-
-
-
-const handleFileChange = async (e) => {
-  const file = e.target.files[0];
-
-  if (!file) {
-    setError("No file selected.");
-    return;
-  }
-
-  // Validate file type and extension
-  const validExtensions = [".jpg"];
-  const fileName = file.name.toLowerCase();
-  const isValidExtension = validExtensions.some((ext) => fileName.endsWith(ext));
-
-  if (!isValidExtension) {
-    setError("Please upload a valid .jpg image file.");
-    return;
-  }
-
-  try {
-    const storageRef = ref(storage, `profilePictures/${user.uid}_${file.name}`);
-    await uploadBytes(storageRef, file);
-    const url = await getDownloadURL(storageRef);
-    setProfilePicture(url);
+  const handleProfileUpdate = async (e) => {
+    e.preventDefault();
     setError("");
-  } catch (error) {
-    console.error("Error uploading image:", error);
-    setError("Failed to upload the image. Please try again.");
-  }
-};
-const handleProfileUpdate = async (e) => {
-  e.preventDefault();
-  setError("");
-  try {
-    const usersQuery = query(collection(db, "users"), where("username", "==", username));
-    const existingUsers = await getDocs(usersQuery);
-    if (!existingUsers.empty) {
-      const matchingUser = existingUsers.docs.find((doc) => doc.id !== user.uid);
-      if (matchingUser) {
-        setError("Username is already taken. Please choose another one.");
-        return;
+    try {
+      const usersQuery = query(collection(db, "users"), where("username", "==", username));
+      const existingUsers = await getDocs(usersQuery);
+      if (!existingUsers.empty) {
+        const matchingUser = existingUsers.docs.find((doc) => doc.id !== user.uid);
+        if (matchingUser) {
+          setError("Username is already taken. Please choose another one.");
+          return;
+        }
       }
+      if (auth.currentUser) {
+        const profileData = {
+          displayName: username,
+          photoURL: profilePicture,
+        };
+        await updateProfile(auth.currentUser, profileData);
+        const userRef = doc(db, "users", user.uid);
+        await updateDoc(userRef, { username });
+        alert("Profile updated successfully!");
+        setShowProfileDetails(false);
+      }
+    } catch (err) {
+      setError(err.message);
     }
-    if (auth.currentUser) {
-      const profileData = {
-        displayName: username,
-        photoURL: profilePicture,
-      };
-      await updateProfile(auth.currentUser, profileData);
-      const userRef = doc(db, "users", user.uid);
-      await updateDoc(userRef, { username });
-      alert("Profile updated successfully!");
-      setShowProfileDetails(false);
-    }
-  } catch (err) {
-    setError(err.message);
-  }
-};
+  };
 
   const createNewMap = async (e) => {
     e.preventDefault();
@@ -241,23 +187,62 @@ const handleProfileUpdate = async (e) => {
   };
 
   const joinMap = async (e) => {
-    // e.preventDefault();
-    // if (!joinMapName.trim()) return;
-    // try {
-    //   const mapToJoin = maps.find(map => map.name === joinMapName);
-    //   if (mapToJoin) {
-    //     setSelectedMapId(mapToJoin.id);
-    //     console.log("Joined map:", mapToJoin.name);
-    //   } else {
-    //     console.log("Map not found!");
-    //   }
-    //   setJoinMapName("");
-    //   setIsJoinInputVisible(false);
-    // } catch (err) {
-    //   console.error("Error joining map:", err.message);
-    // }
-  };
+    e.preventDefault();
+    setJoinSuccessMessage("");
+    setError("");
+  
+    if (!joinMapName.trim() || !joinMapId.trim()) {
+      setError("Please provide both the map name and ID.");
+      return;
+    }
+  
+    try {
+      // Fetch the map by document ID directly
+      const mapDocRef = doc(db, "maps", joinMapId);
+      const mapDocSnap = await getDoc(mapDocRef);
+  
+      if (mapDocSnap.exists()) {
+        const mapData = mapDocSnap.data();
+  
+        // Check if the map name matches
+        if (mapData.name === joinMapName) {
+          // Check if the user is already a participant
+          if(mapData.participants && mapData.participants.includes(user.uid)) {
+            setJoinSuccessMessage("You have already joined this map.");
+          } else {
+            // Add the user to participants
+            await updateDoc(mapDocRef, {
+              participants: arrayUnion(user.uid),
+            });
+  
 
+  
+            setJoinSuccessMessage("You have successfully joined the map.");
+            setJoinMapName("");
+            setJoinMapId(""); // Clear input fields only on successful join
+          }
+        } else {
+          setError("The map name does not match the provided ID.");
+        }
+      } else {
+        setError("No map found with the provided ID.");
+      }
+    } catch (err) {
+      console.error("Error joining map:", err.message);
+      setError("An error occurred while trying to join the map. Please try again.");
+    }
+  };
+  
+  
+  
+  const cancelJoinMap = () => {
+    setJoinMapName("");
+    setJoinMapId("");
+    setIsJoinInputVisible(false); // Close the modal
+  };
+  
+  
+  
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -274,7 +259,6 @@ const handleProfileUpdate = async (e) => {
 
   return (
     <div className="dashboard-container">
-      {/* Header Section */}
       <header className="dashboard-header">
         <div className="header-left">
           <div className="user-info">
@@ -294,8 +278,7 @@ const handleProfileUpdate = async (e) => {
           </button>
         </div>
       </header>
-  
-      {/* Modal for Profile Details */}
+
       {showProfileDetails && (
         <div className="modal">
           <div className="modal-content">
@@ -346,24 +329,21 @@ const handleProfileUpdate = async (e) => {
           </div>
         </div>
       )}
-  
+
       <div className="button-container">
-        {/* Create New Map Button */}
         {!isCreateInputVisible && (
           <button className="card-button" onClick={() => setIsCreateInputVisible(true)}>
             Create New Map
           </button>
         )}
-  
-        {/* Join Map Button */}
+
         {!isJoinInputVisible && (
           <button className="card-button" onClick={() => setIsJoinInputVisible(true)}>
             Join Map
           </button>
         )}
       </div>
-  
-      {/* Modal for creating new map */}
+
       {isCreateInputVisible && (
         <div className="modal">
           <div className="modal-content">
@@ -391,8 +371,7 @@ const handleProfileUpdate = async (e) => {
           </div>
         </div>
       )}
-  
-      {/* Modal for joining a map */}
+
       {isJoinInputVisible && (
         <div className="modal">
           <div className="modal-content">
@@ -401,9 +380,18 @@ const handleProfileUpdate = async (e) => {
                 type="text"
                 value={joinMapName}
                 onChange={(e) => setJoinMapName(e.target.value)}
-                placeholder="Enter map name to join"
+                placeholder="Enter map name"
                 className="new-map-input"
               />
+              <input
+                type="text"
+                value={joinMapId}
+                onChange={(e) => setJoinMapId(e.target.value)}
+                placeholder="Enter map ID"
+                className="new-map-input"
+              />
+              {joinSuccessMessage && <p className="success-text">{joinSuccessMessage}</p>}
+              {error && <p className="error-text">{error}</p>}
               <div className="modal-buttons">
                 <button type="submit" className="card-button">
                   Join Map
@@ -420,8 +408,7 @@ const handleProfileUpdate = async (e) => {
           </div>
         </div>
       )}
-  
-      {/* Confirmation Modal */}
+
       {confirmDelete.isVisible && (
         <div className="modal">
           <div className="modal-content">
@@ -433,7 +420,7 @@ const handleProfileUpdate = async (e) => {
           </div>
         </div>
       )}
-  
+
       <h3>Your Maps:</h3>
       <ul className="maps-list">
         {maps.map((m) => (
@@ -454,7 +441,6 @@ const handleProfileUpdate = async (e) => {
       </ul>
     </div>
   );
-  
 };
 
 export default Dashboard;
