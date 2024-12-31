@@ -12,6 +12,11 @@ import { doc, updateDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import io from "socket.io-client";
 import { useNavigate } from "react-router-dom";
+import ParticipantBox from "./ParticipantBox";
+import { getAuth } from "firebase/auth";
+
+const auth = getAuth();
+const currentUserId = auth.currentUser?.uid;
 
 const socket = io("http://localhost:5000");
 
@@ -234,8 +239,6 @@ const MapEditor = ({ mapId }) => {
     }
   };
 
-
-
   
 
   return (
@@ -247,7 +250,7 @@ const MapEditor = ({ mapId }) => {
           onNodesChange={handleNodeChanges}
           onEdgesChange={handleEdgeChanges}
           
-          onConnect={(params) => setEdges((eds) => addEdge(params, eds))}
+          onConnect={onConnect}
           
           
           onNodeClick={onNodeClick} // Handle node click
@@ -307,7 +310,8 @@ const MapEditor = ({ mapId }) => {
             />
           </div>
         )}
-        
+        <ParticipantBox mapId={mapId} currentUserId={currentUserId} />
+
       </div>
     </div>
   );
