@@ -18,6 +18,7 @@ import { getAuth } from "firebase/auth";
 const auth = getAuth();
 const currentUserId = auth.currentUser?.uid;
 
+
 const socket = io("http://localhost:5000");
 
 const initialNodes = [
@@ -45,6 +46,12 @@ const MapEditor = ({ mapId }) => {
   const [selectedNode, setSelectedNode] = useState(null); // To store the currently selected node
   const [borderColor, setBorderColor] = useState("#000000"); // Default border color
   const [textColor, setTextColor] = useState("#000000");
+  const [nodeNotes, setNodeNotes] = useState({});
+  const prevNodeNotesRef = useRef(nodeNotes);
+  const [nodeData, setNodeData] = useState({}); // { nodeId: { note, link } }
+
+  const prevNodeDataRef = useRef(nodeData);
+  const noteInputRef = useRef(null);
   
 
   // Refs to track previous state
@@ -67,7 +74,10 @@ const MapEditor = ({ mapId }) => {
       console.log("Edges:", newEdges);
       // Only update if nodes or edges have actually changed
       if (JSON.stringify(newNodes) !== JSON.stringify(prevNodesRef.current) || 
-          JSON.stringify(newEdges) !== JSON.stringify(prevEdgesRef.current)) {
+          JSON.stringify(newEdges) !== JSON.stringify(prevEdgesRef.current) ||
+          JSON.stringify(nodeNotes) !== JSON.stringify(prevNodeNotesRef.current ||
+          JSON.stringify(nodeData) !== JSON.stringify(prevNodeDataRef.current)
+          )) {
         const mapRef = doc(db, "maps", mapId);
         updateDoc(mapRef, {
           nodes: newNodes,
@@ -75,14 +85,18 @@ const MapEditor = ({ mapId }) => {
           name: mapName,
           description: mapDescription,
           lastEdited: new Date(),
+          nodeNotes: nodeNotes,
+          nodeData: nodeData,
         }).catch((err) => console.error("Firebase update failed:", err));
         
         // Update refs to current values
         prevNodesRef.current = newNodes;
         prevEdgesRef.current = newEdges;
+        prevNodeNotesRef.current = nodeNotes;
+        prevNodeDataRef.current = nodeData;
       }
     },
-    [firebaseInitialized, mapId, mapName, mapDescription]
+    [firebaseInitialized, mapId, mapName, mapDescription,nodeNotes,nodeData]
   );
 
   const onConnect = useCallback(
@@ -96,6 +110,30 @@ const MapEditor = ({ mapId }) => {
     },
     [nodes, updateFirebase]
   );
+  
+  const handleNoteChange = (event) => {
+    const newNote = event.target.value;
+    if (selectedNode) {
+      setNodeNotes((prevNotes) => {
+        const updatedNotes = { ...prevNotes, [selectedNode.id]: newNote };
+        return updatedNotes;
+      });
+      // Optionally debounce Firebase updates instead of updating it on every key press
+    }
+  };
+  
+
+  const handleNoteBlur = () => {
+    // Update Firebase when input loses focus (optional)
+    if (selectedNode) {
+      const newNote = noteInputRef.current.value;
+      setNodeNotes((prevNotes) => ({
+        ...prevNotes,
+        [selectedNode.id]: newNote,
+      }));
+      updateFirebase(nodes, edges);
+    }
+  };
 
   const handleSelectionChange = useCallback((elements) => {
     const newSelectedElements = elements && Array.isArray(elements) ? elements.map((el) => el.id) : [];
@@ -190,12 +228,16 @@ const MapEditor = ({ mapId }) => {
           JSON.stringify(prevMapDataRef.current.nodes) !== JSON.stringify(mapData.nodes) ||
           JSON.stringify(prevMapDataRef.current.edges) !== JSON.stringify(mapData.edges) ||
           prevMapDataRef.current.name !== mapData.name ||
-          prevMapDataRef.current.description !== mapData.description
+          prevMapDataRef.current.description !== mapData.description ||
+          JSON.stringify(prevMapDataRef.current.nodeNotes) !== JSON.stringify(mapData.nodeNotes)||
+          JSON.stringify(prevMapDataRef.current.nodeData) !== JSON.stringify(mapData.nodeData)
         ) {
           setNodes(mapData.nodes || []);
           setEdges(mapData.edges || []);
           setMapName(mapData.name || "");
           setMapDescription(mapData.description || "");
+          setNodeNotes(mapData.nodeNotes || {});
+          setNodeData(mapData.nodeData || {});
           setLastEdited(mapData.lastEdited?.toDate().toLocaleString() || "Not available");
           setMapCreator(mapData.creator || "Unknown");
           setFirebaseInitialized(true); // Firebase data is now loaded
@@ -239,6 +281,24 @@ const MapEditor = ({ mapId }) => {
     }
   };
 
+
+  const handleLinkChange = (link) => {
+    if (selectedNode) {
+      setNodeData((prevData) => ({
+        ...prevData,
+        [selectedNode.id]: {
+          ...prevData[selectedNode.id],
+          link,
+        },
+      }));
+      updateFirebase(nodes, edges); // Update Firebase with the new link
+    }
+  };
+  
+  
+
+  
+
   
 
   return (
@@ -261,7 +321,7 @@ const MapEditor = ({ mapId }) => {
         />
       </div>
 
-      <div style={{ width: "20%", padding: "10px", background: "#f4f4f4" }}>
+      <div style={{ width: "20%", padding: "10px", background: "#f4f4f4",height: "100%",overflowY: "auto",boxShadow: "0 0 10px rgba(0, 0, 0, 0.1)", }}>
         <h3>Map Details</h3>
         
         <button onClick={addNode} style={{ marginBottom: "10px" }}>Add Node</button>
@@ -300,16 +360,82 @@ const MapEditor = ({ mapId }) => {
         </div>
         {/* Color Picker for Selected Node's Border */}
         {selectedNode && (
-          <div>
-            <label>Selected Node Border Color:</label>
-            <input
-              type="color"
-              value={borderColor}
-              onChange={(e) => handleBorderColorChange(e.target.value)} // Change border color
-              style={{ width: "100%" }}
-            />
+          <div style={{ marginTop: "20px", padding: "10px", border: "1px solid #ccc", borderRadius: "8px", backgroundColor: "#fff" }}>
+            <h4 style={{ marginBottom: "10px", textAlign: "center", color: "#00796b" }}>
+              Node Details
+            </h4>
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ display: "block", fontWeight: "bold", marginBottom: "5px", color: "#388e3c" }}>
+                Border Color:
+              </label>
+              <input
+                type="color"
+                value={borderColor}
+                onChange={(e) => handleBorderColorChange(e.target.value)} 
+                style={{ width: "100%", height: "40px", borderRadius: "5px", border: "1px solid #ccc" }}
+              />
+            </div>
+            <div>
+              <label style={{ display: "block", fontWeight: "bold", marginBottom: "5px", color: "#388e3c" }}>
+                Notes:
+              </label>
+              <textarea
+                ref={noteInputRef}
+                value={nodeNotes[selectedNode.id] || ""}
+                onChange={handleNoteChange}
+                onBlur={handleNoteBlur}
+                placeholder="Add a note for this node"
+                style={{
+                  width: "80%",
+                  height: "50px",
+                  padding: "10px",
+                  borderRadius: "8px",
+                  border: "1px solid #ccc",
+                  fontSize: "14px",
+                  fontFamily: "'Arial', sans-serif",
+                  backgroundColor: "#f9f9f9",
+                  resize: "none",
+                }}
+              />
+            </div>
+
+            {/* Link Input */}
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ display: "block", fontWeight: "bold", marginBottom: "5px", color: "#388e3c" }}>
+                Link:
+              </label>
+              <input
+                type="text"
+                value={nodeData[selectedNode.id]?.link || ""}
+                onChange={(e) => handleLinkChange(e.target.value)}
+                placeholder="Add a link"
+                style={{
+                  width: "80%",
+                  padding: "10px",
+                  borderRadius: "8px",
+                  border: "1px solid #ccc",
+                }}
+              />
+            </div>
+            {selectedNode && nodeData[selectedNode.id]?.link && (
+              <div style={{ marginTop: "15px" }}>
+                <label style={{ fontWeight: "bold", color: "#388e3c" }}>Link:</label>
+                <a 
+                  href={nodeData[selectedNode.id].link} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  style={{ wordBreak: "break-word" }}
+                >
+                  {nodeData[selectedNode.id].link}
+                </a>
+              </div>
+            )}
+
+
+
           </div>
         )}
+
         <ParticipantBox mapId={mapId} currentUserId={currentUserId} />
 
       </div>

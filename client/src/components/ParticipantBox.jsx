@@ -38,7 +38,7 @@ const ParticipantBox = ({ mapId, currentUserId }) => {
     });
 
     // Emit join-map for the current user
-    if (currentUserId) {
+    if (currentUserId && userDetails[currentUserId]) {
       socket.emit("join-map", {
         userId: currentUserId,
         username: userDetails[currentUserId]?.username || "Unknown User",
@@ -83,14 +83,19 @@ const ParticipantBox = ({ mapId, currentUserId }) => {
                 {user.username || participant.name || "Unknown User"}
                 {participant.id === currentUserId ? " (Me)" : ""}
               </span>
-              <span
+              <img
+                src={user.profileImage || "/default-profile.png"} // Fallback to a default image
+                alt={`${user.username || "Unknown User"}'s profile`}
+                className="profile-picture" 
+              />
+              {/* <span
                 style={{
                   color: participant.online ? "green" : "red",
                   fontWeight: "bold",
                 }}
               >
                 {participant.online ? "Online" : "Offline"}
-              </span>
+              </span> */}
             </li>
           );
         })}
