@@ -7,8 +7,6 @@ import { useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
 import io from "socket.io-client";
 import "../styles/Dashboard.css";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage } from "../firebase";
 
 const Dashboard = ({ user }) => {
   const [maps, setMaps] = useState([]);
@@ -44,28 +42,20 @@ const Dashboard = ({ user }) => {
   }, [user.uid]);
 
   useEffect(() => {
-    const checkUserInDatabase = async () => {
+    const fetchUserProfile = async () => {
       try {
         const userRef = doc(db, "users", user.uid);
-        const userDoc = await getDocs(query(collection(db, "users"), where("uid", "==", user.uid)));
-        
-        if (userDoc.empty) {
-          await setDoc(userRef, {
-            uid: user.uid,
-            email: user.email,
-            username: user.displayName || "",
-            profilePicture: user.photoURL || "",
-            createdAt: new Date().toISOString(),
-          });
-        } else {
-          await updateDoc(userRef, {
-            email: user.email,
-            username: user.displayName || username,
-            profilePicture: user.photoURL || profilePicture,
-          });
+        const userDoc = await getDoc(userRef);
+
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setProfilePicture(userData.profilePicture || ""); // Set the profile picture
+          setUsername(userData.username || "");
+          setEmail(userData.email || "");
         }
       } catch (error) {
-        console.error("Error checking user in database: ", error);
+        console.error("Error fetching user profile:", error);
+        setError("Failed to load profile data. Please try again.");
       }
     };
 
@@ -77,7 +67,7 @@ const Dashboard = ({ user }) => {
       console.log('New map created:', newMap);
     });
 
-    checkUserInDatabase();
+    fetchUserProfile();
 
     return () => {
       newSocket.disconnect();
@@ -92,24 +82,33 @@ const Dashboard = ({ user }) => {
       return;
     }
 
-    const validExtensions = [".jpg"];
+    const validExtensions = [".jpg", ".jpeg", ".png"];
     const fileName = file.name.toLowerCase();
     const isValidExtension = validExtensions.some((ext) => fileName.endsWith(ext));
 
     if (!isValidExtension) {
-      setError("Please upload a valid .jpg image file.");
+      setError("Please upload a valid image file (.jpg, .jpeg, .png).");
       return;
     }
 
     try {
-      const storageRef = ref(storage, `profilePictures/${user.uid}_${file.name}`);
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
-      setProfilePicture(url);
-      setError("");
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64String = reader.result;
+
+        // Update Firestore with the Base64 string
+        const userRef = doc(db, "users", user.uid);
+        await updateDoc(userRef, { profilePicture: base64String });
+
+        // Update local state for UI
+        setProfilePicture(base64String);
+        setError("");
+        alert("Profile picture updated successfully!");
+      };
+      reader.readAsDataURL(file);
     } catch (error) {
-      console.error("Error uploading image:", error);
-      setError("Failed to upload the image. Please try again.");
+      console.error("Error processing file:", error);
+      setError("Failed to process the file. Please try again.");
     }
   };
 
@@ -190,36 +189,29 @@ const Dashboard = ({ user }) => {
     e.preventDefault();
     setJoinSuccessMessage("");
     setError("");
-  
+
     if (!joinMapName.trim() || !joinMapId.trim()) {
       setError("Please provide both the map name and ID.");
       return;
     }
-  
+
     try {
-      // Fetch the map by document ID directly
       const mapDocRef = doc(db, "maps", joinMapId);
       const mapDocSnap = await getDoc(mapDocRef);
-  
+
       if (mapDocSnap.exists()) {
         const mapData = mapDocSnap.data();
-  
-        // Check if the map name matches
+
         if (mapData.name === joinMapName) {
-          // Check if the user is already a participant
           if(mapData.participants && mapData.participants.includes(user.uid)) {
             setJoinSuccessMessage("You have already joined this map.");
           } else {
-            // Add the user to participants
             await updateDoc(mapDocRef, {
               participants: arrayUnion(user.uid),
             });
-  
-
-  
             setJoinSuccessMessage("You have successfully joined the map.");
             setJoinMapName("");
-            setJoinMapId(""); // Clear input fields only on successful join
+            setJoinMapId("");
           }
         } else {
           setError("The map name does not match the provided ID.");
@@ -232,17 +224,13 @@ const Dashboard = ({ user }) => {
       setError("An error occurred while trying to join the map. Please try again.");
     }
   };
-  
-  
-  
+
   const cancelJoinMap = () => {
     setJoinMapName("");
     setJoinMapId("");
-    setIsJoinInputVisible(false); // Close the modal
+    setIsJoinInputVisible(false);
   };
-  
-  
-  
+
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -390,7 +378,6 @@ const Dashboard = ({ user }) => {
                 placeholder="Enter map ID"
                 className="new-map-input"
               />
-              {/* {joinSuccessMessage && <p className="success-text">{joinSuccessMessage}</p>} */}
               {joinSuccessMessage && (
               <div className="modal">
                 <div className="modal-content">

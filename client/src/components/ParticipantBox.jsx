@@ -84,18 +84,16 @@ const ParticipantBox = ({ mapId, currentUserId }) => {
                 {participant.id === currentUserId ? " (Me)" : ""}
               </span>
               <img
-                src={user.profileImage || "/default-profile.png"} // Fallback to a default image
+                src={user.profilePicture || "/default-profile.png"} // Use Base64 string directly
                 alt={`${user.username || "Unknown User"}'s profile`}
-                className="profile-picture" 
-              />
-              {/* <span
+                className="profile-picture"
                 style={{
-                  color: participant.online ? "green" : "red",
-                  fontWeight: "bold",
+                  width: "50px",
+                  height: "50px",
+                  borderRadius: "50%", // Circular profile pictures
+                  objectFit: "cover", // Ensure aspect ratio is maintained
                 }}
-              >
-                {participant.online ? "Online" : "Offline"}
-              </span> */}
+              />
             </li>
           );
         })}
