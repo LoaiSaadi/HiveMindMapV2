@@ -301,6 +301,21 @@ const LoginPage = ({ onLogin }) => {
           Forgot Password?
         </span>
       </p>
+      <div>
+        <div
+          className="tenor-gif-embed"
+          data-postid="10521569059124562392"
+          data-share-method="host"
+          data-aspect-ratio="1.2"
+          data-width="100%"
+          style={{ width: '50px', height: '50px', display: 'inline-block' }}
+        >
+          <a href="https://tenor.com/view/milk-and-mocha-gif-10521569059124562392">Milk And Mocha Sticker</a>
+          from
+          <a href="https://tenor.com/search/milk+and+mocha-stickers">Milk And Mocha Stickers</a>
+        </div>
+        <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+      </div>
     </div>
   );
 };
