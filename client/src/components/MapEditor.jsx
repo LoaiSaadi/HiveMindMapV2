@@ -6,15 +6,74 @@ import ReactFlow, {
   ReactFlowProvider,
   useEdgesState,
   useNodesState,
+  Panel,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import { doc, updateDoc, onSnapshot } from "firebase/firestore";
+import { doc, updateDoc, onSnapshot, setDoc,collection } from "firebase/firestore";
 import { db } from "../firebase";
 import io from "socket.io-client";
 import { useNavigate } from "react-router-dom";
 import ParticipantBox from "./ParticipantBox";
 import { getAuth } from "firebase/auth";
+// Add this new component
+const ContextMenu = ({ onClick, onClose, position, onRename }) => {
+  if (!position) return null;
 
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        left: position.x,
+        top: position.y,
+        zIndex: 1000,
+        backgroundColor: 'white',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+        borderRadius: '4px',
+        padding: '8px',
+      }}
+      className="context-menu"
+    >
+      <button
+        onClick={() => {
+          onClick();
+          onClose();
+        }}
+        style={{
+          display: 'block',
+          width: '100%',
+          padding: '8px 12px',
+          textAlign: 'left',
+          border: 'none',
+          backgroundColor: 'transparent',
+          cursor: 'pointer',
+          borderRadius: '2px',
+        }}
+        onMouseEnter={(e) => e.target.style.backgroundColor = '#f0f0f0'}
+        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+      >
+        Add Node
+      </button>
+      <button
+        onClick={() => {
+          onRename();
+          onClose();
+        }}
+        style={{
+          display: 'block',
+          width: '100%',
+          padding: '8px 12px',
+          textAlign: 'left',
+          border: 'none',
+          backgroundColor: 'transparent',
+          cursor: 'pointer',
+          borderRadius: '2px',
+        }}
+      >
+        Rename Node
+      </button>
+    </div>
+  );
+};
 const auth = getAuth();
 const currentUserId = auth.currentUser?.uid;
 
@@ -49,10 +108,13 @@ const MapEditor = ({ mapId }) => {
   const [nodeNotes, setNodeNotes] = useState({});
   const prevNodeNotesRef = useRef(nodeNotes);
   const [nodeData, setNodeData] = useState({}); // { nodeId: { note, link } }
-
+  const [contextMenu, setContextMenu] = useState(null);
   const prevNodeDataRef = useRef(nodeData);
   const noteInputRef = useRef(null);
-  
+  const [cursors, setCursors] = useState({});
+  const reactFlowWrapper = useRef(null); // Ref for ReactFlow wrapper
+  const [disableShortcuts, setDisableShortcuts] = useState(false);
+
 
   // Refs to track previous state
   const prevNodesRef = useRef(nodes);
@@ -98,7 +160,23 @@ const MapEditor = ({ mapId }) => {
     },
     [firebaseInitialized, mapId, mapName, mapDescription,nodeNotes,nodeData]
   );
-
+  const updateCursor = useCallback(
+    async (x, y) => {
+      try {
+        const cursorData = {
+          x,
+          y,
+          username: auth.currentUser?.displayName || "Unknown User",
+          color: "#FF5733", // Unique color for this user
+        };
+        const cursorRef = doc(db, `maps/${mapId}/cursors/${currentUserId}`);
+        await setDoc(cursorRef, cursorData);
+      } catch (err) {
+        console.error("Cursor update failed:", err);
+      }
+    },
+    [mapId, currentUserId]
+  );
   const onConnect = useCallback(
     (params) => {
       setEdges((eds) => {
@@ -134,6 +212,35 @@ const MapEditor = ({ mapId }) => {
       updateFirebase(nodes, edges);
     }
   };
+  const onContextMenu = useCallback((event) => {
+    event.preventDefault();
+    
+    const reactFlowBounds = event.target.getBoundingClientRect(); // Get ReactFlow container bounds
+    const x = event.clientX - reactFlowBounds.left; // Adjust to ReactFlow bounds
+    const y = event.clientY - reactFlowBounds.top;
+  
+    setContextMenu({ x, y });
+  }, []);
+   
+  
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (contextMenu) {
+        closeContextMenu(); // Close the menu if it's open and a click happens outside
+      }
+    };
+  
+    document.addEventListener("click", handleClickOutside);
+  
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, [contextMenu, closeContextMenu]);
 
   const handleSelectionChange = useCallback((elements) => {
     const newSelectedElements = elements && Array.isArray(elements) ? elements.map((el) => el.id) : [];
@@ -166,45 +273,77 @@ const MapEditor = ({ mapId }) => {
     [nodes, updateFirebase]
   );
 
-  const addNode = useCallback(() => {
-    console.log("Adding Node with ID:", nodeId);
+  const addNode = useCallback((position = { x: Math.random() * 400, y: Math.random() * 400 }) => {
     const newNodeId = nodes.length ? Math.max(...nodes.map((node) => parseInt(node.id))) + 1 : 1;
-
+  
     const newNode = {
       id: newNodeId.toString(),
       data: { label: `Node ${newNodeId}` },
-      position: { x: Math.random() * 400, y: Math.random() * 400 },
-      style: { border: `2px solid ${borderColor}` }, 
+      position, // Use the passed position
+      style: { border: `2px solid ${borderColor}` },
     };
-    console.log("New Node Created:", newNode);
+  
     setNodes((nds) => {
-      
       const updatedNodes = [...nds, newNode];
-      console.log("Updated Nodes:", updatedNodes);
-      updateFirebase(updatedNodes, edges); // update Firebase only when there's a real change
+      updateFirebase(updatedNodes, edges);
       return updatedNodes;
     });
+  
     setNodeId((id) => id + 1);
     socket.emit("node-added", newNode);
-  }, [nodeId, edges, updateFirebase , borderColor]);
+  }, [nodes, edges, updateFirebase, borderColor]);
+  
 
-  const onNodeDoubleClick = useCallback(
-    (event, node) => {
-      const newLabel = window.prompt("Enter new label for the node:", node.data.label);
-      if (newLabel !== null) {
-        setNodes((nds) => {
-          const updatedNodes = nds.map((n) =>
-            n.id === node.id ? { ...n, data: { ...n.data, label: newLabel } } : n
-          );
-          updateFirebase(updatedNodes, edges); // update Firebase only when there's a real change
-          return updatedNodes;
-        });
-        socket.emit("node-renamed", { id: node.id, label: newLabel });
-      }
-    },
-    [edges, updateFirebase]
-  );
-
+  const onNodeDoubleClick = useCallback((event, node) => {
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === node.id ? { ...n, data: { ...n.data, isEditing: true } } : n
+      )
+    );
+  }, []);
+  const handleLabelChange = (event, nodeId) => {
+    const newLabel = event.target.value;
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === nodeId ? { ...n, data: { ...n.data, label: newLabel } } : n
+      )
+    );
+  };
+  
+  const handleLabelBlur = (nodeId) => {
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === nodeId ? { ...n, data: { ...n.data, isEditing: false } } : n
+      )
+    );
+  };
+  const renderNode = (node) => {
+    if (node.data.isEditing) {
+      return (
+        <input
+          type="text"
+          value={node.data.label}
+          onFocus={() => setDisableShortcuts(true)} // Disable shortcuts
+          onBlur={() => {
+            handleLabelBlur(node.id);
+            setDisableShortcuts(false); // Enable shortcuts
+          }}
+          onChange={(e) => handleLabelChange(e, node.id)}
+          onKeyDown={(e) => {
+            e.stopPropagation(); // Prevent global `keydown`
+            if (e.key === "Enter") {
+              handleLabelBlur(node.id);
+              setDisableShortcuts(false); // Enable shortcuts
+            }
+          }}
+          autoFocus
+          style={{ width: "100%" }}
+        />
+      );
+    }
+    return <span>{node.data.label}</span>;
+  };
+  
   const onDelete = useCallback(() => {
     const remainingNodes = nodes.filter((node) => !selectedElements.includes(node.id));
     const remainingEdges = edges.filter((edge) => !selectedElements.includes(edge.id));
@@ -248,17 +387,55 @@ const MapEditor = ({ mapId }) => {
 
     return () => unsubscribe();
   }, [mapId]); // Only re-run when mapId changes
+  useEffect(() => {
+    const handleMouseMove = (event) => {
+      const bounds = reactFlowWrapper.current.getBoundingClientRect();
+      const x = event.clientX - bounds.left;
+      const y = event.clientY - bounds.top;
+      updateCursor(x, y);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    return () => document.removeEventListener("mousemove", handleMouseMove);
+  }, [updateCursor]);
+
+  const predefinedColors = [
+    "#FF5733", "#33FF57", "#3357FF", "#FF33A8", "#A833FF", "#33FFF5", "#FFC233",
+    "#FF3333", "#33FF8E", "#8E33FF", "#FF8E33", "#33A8FF", "#57FF33",
+  ];
+  
+  useEffect(() => {
+    const cursorsRef = collection(db, `maps/${mapId}/cursors`);
+    
+    const unsubscribe = onSnapshot(cursorsRef, (snapshot) => {
+      const newCursors = {};
+      snapshot.forEach((doc, index) => {
+        newCursors[doc.id] = {
+          ...doc.data(),
+          color: predefinedColors[index % predefinedColors.length], // Assign a color from the predefined list
+        };
+      });
+      setCursors(newCursors);
+    });
+  
+    return () => unsubscribe();
+  }, [mapId]);
+
 
   useEffect(() => {
     const handleKeyDown = (event) => {
+      if (disableShortcuts) return;
+  
       if (event.key === "Delete" || event.key === "Backspace") {
         onDelete();
+      } else if (event.key === "n" || event.key === "N") {
+        addNode();
       }
     };
-
+  
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onDelete]);
+  }, [onDelete, addNode, disableShortcuts]);
 
 
   // Handle node click to select it
@@ -302,29 +479,95 @@ const MapEditor = ({ mapId }) => {
   
 
   return (
-    <div style={{ width: "100%", height: "100vh", display: "flex" }}>
+    <div ref={reactFlowWrapper} style={{ backgroundColor: "#d9fdd3", width: "100%", height: "100vh", position: "relative" }}>
       <div style={{ width: "80%", height: "100%" }}>
+      <Panel position="top-left">
+      <div className="description" style={{ padding: '10px', background:"linear-gradient(to bottom, #4caf50, #81c784)",color: "#ffffff", boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)", borderRadius: '4px' }}>
+      <p>Keyboard Shortcuts:</p>
+      <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+        <li><strong>N:</strong> Add a new node</li>
+        <li><strong>Del/Backspace:</strong> Delete selected node</li>
+        <li><strong>Right-click:</strong> Rename a node , Add node</li>
+      </ul>
+      <p>Total Nodes: {nodes.length}</p>
+    </div>
+      </Panel>
         <ReactFlow
-          nodes={nodes}
+          nodes={nodes.map((node) => ({
+            ...node,
+            data: {
+              ...node.data,
+              label: renderNode(node),
+            },
+          }))}
           edges={edges}
           onNodesChange={handleNodeChanges}
           onEdgesChange={handleEdgeChanges}
-          
+          onContextMenu={onContextMenu}
           onConnect={onConnect}
-          
-          
           onNodeClick={onNodeClick} // Handle node click
           onSelectionChange={handleSelectionChange} // Use the optimized selection handler
           onNodeDoubleClick={onNodeDoubleClick}
           selectNodesOnDrag
           fitView
         />
+{Object.entries(cursors).map(([id, cursor]) => (
+  <div
+    key={id}
+    style={{
+      position: "absolute",
+      left: cursor.x,
+      top: cursor.y,
+      transform: "translate(-50%, -50%)",
+      pointerEvents: "none",
+      zIndex: 1000,
+    }}
+  >
+    <div
+      style={{
+        padding: "4px 8px",
+        background: cursor.color,
+        color: "white", // Ensure text contrast
+        fontWeight: "bold",
+        fontSize: "12px",
+        borderRadius: "8px",
+        boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)",
+        whiteSpace: "nowrap",
+        textAlign: "center",
+        marginBottom: "6px", // Space between the label and the circle
+      }}
+    >
+      {cursor.username}
+    </div>
+    <div
+      style={{
+        width: "10px",
+        height: "10px",
+        background: cursor.color,
+        borderRadius: "50%",
+      }}
+    ></div>
+  </div>
+))}
+
+
+
+      
+        {/* Context menu */}
+      {contextMenu && (
+        <ContextMenu
+          position={contextMenu}
+          onClick={() => addNode({ x: contextMenu.x, y: contextMenu.y })}
+          onRename={() => selectedNode && onNodeDoubleClick(null, selectedNode)}
+          onClose={closeContextMenu}
+        />
+      )}
       </div>
 
-      <div style={{ width: "20%", padding: "10px", background: "#f4f4f4",height: "100%",overflowY: "auto",boxShadow: "0 0 10px rgba(0, 0, 0, 0.1)", }}>
+      <div style={{zIndex:1000, position:"absolute" ,  width: "20%", padding: "10px",right: "0",top:"0", background: "#f4f4f4",height: "100%",overflowY: "auto",boxShadow: "0 0 10px rgba(0, 0, 0, 0.1)", }}>
         <h3>Map Details</h3>
         
-        <button onClick={addNode} style={{ marginBottom: "10px" }}>Add Node</button>
+        
         {/* <button onClick={onDelete} style={{ marginBottom: "10px" }}>Delete Selected</button> */}
         <button onClick={refreshPage} style={{ marginBottom: "10px" }}>
           Home Page
@@ -429,6 +672,7 @@ const MapEditor = ({ mapId }) => {
                   {nodeData[selectedNode.id].link}
                 </a>
               </div>
+              
             )}
 
 
