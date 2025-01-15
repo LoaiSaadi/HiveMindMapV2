@@ -20,7 +20,7 @@ const ParticipantBox = ({ mapId, currentUserId }) => {
         setParticipants(
           participantIds.map((id) => ({
             id,
-            online: false, // Default all users to offline initially
+            online: id === currentUserId, // Set current user to online
           }))
         );
 
@@ -48,10 +48,10 @@ const ParticipantBox = ({ mapId, currentUserId }) => {
 
     // Listen for real-time participant status updates
     socket.on("participant-status", (updatedParticipants) => {
-      setParticipants(
-        Object.values(updatedParticipants).map((participant) => ({
+      setParticipants((prev) =>
+        prev.map((participant) => ({
           ...participant,
-          online: participant.online || false,
+          online: updatedParticipants[participant.id]?.online || false,
         }))
       );
     });

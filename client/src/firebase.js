@@ -3,7 +3,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from "firebase/auth";
 import { getFirestore, doc, setDoc } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
-
+import { getDatabase } from "firebase/database";
 // Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyBOPd8Wbr02Qfc4-lAm0Yw8_hScThteHYo",
@@ -20,4 +20,5 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app); // Authentication management
 export const db = getFirestore(app); // Firestore database
 export const storage = getStorage(app); // Firebase storage
+export const rtdb = getDatabase(app); // Realtime Database for online tracking
 export default app;
