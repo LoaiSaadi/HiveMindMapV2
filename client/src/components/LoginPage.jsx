@@ -142,25 +142,58 @@ const LoginPage = ({ onLogin }) => {
   // If in password reset mode
   if (showReset) {
     return (
-      <div style={{ maxWidth: "400px", margin: "50px auto", textAlign: "center" }}>
-        <h2>Reset Password</h2>
+      <div style={{
+        maxWidth: "400px",
+        margin: "50px auto",
+        textAlign: "center",
+        background: "linear-gradient(to right, #A8E063,rgb(166, 214, 144))",
+        padding: "30px",
+        borderRadius: "15px",
+        boxShadow: "0 4px 10px rgba(0, 0, 0, 0.2)",
+        fontFamily: "'Poppins', sans-serif"
+      }}>
+        <h2 style={{ color: "#2C5F2D", marginBottom: "20px", fontSize: "1.8rem" }}>Reset Password</h2>
         <form onSubmit={handleResetPassword}>
-          <div style={{ marginBottom: "10px" }}>
-            <label>Email:</label>
+          <div style={{ marginBottom: "20px" }}>
+            <label style={{ fontWeight: "bold", marginBottom: "10px", display: "block", color: "#2C5F2D" }}>Email:</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              style={{ width: "100%", padding: "10px" }}
+              style={{
+                color: "#2C5F2D",
+                width: "80%",
+                padding: "12px",
+                borderRadius: "8px",
+                border: "1px solid #ccc",
+                boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)"
+              }}
             />
           </div>
-          {error && <p style={{ color: "red" }}>{error}</p>}
-          <button type="submit">Send Reset Email</button>
+          {error && <p style={{ color: "red", fontSize: "0.9rem" }}>{error}</p>}
+          <button
+            type="submit"
+            style={{
+              backgroundColor: "#4CAF50",
+              color: "#2C5F2D",
+              border: "none",
+              padding: "12px 25px",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontWeight: "bold",
+              transition: "background-color 0.3s ease",
+              fontSize: "1rem"
+            }}
+            onMouseOver={(e) => e.target.style.backgroundColor = "#45A049"}
+            onMouseOut={(e) => e.target.style.backgroundColor = "#4CAF50"}
+          >
+            Send Reset Email
+          </button>
         </form>
-        <p>
+        <p style={{ marginTop: "15px", fontSize: "0.9rem" }}>
           <span
-            style={{ color: "blue", cursor: "pointer" }}
+            style={{ color: "#4CAF50", cursor: "pointer", textDecoration: "underline" }}
             onClick={() => setShowReset(false)}
           >
             Back to {isLogin ? "Login" : "Sign Up"}
@@ -173,36 +206,42 @@ const LoginPage = ({ onLogin }) => {
   return (
     <div
       style={{
-        maxWidth: "500px",
+        background: "linear-gradient(to right, #A8E063, #56AB2F)",
+        maxWidth: "650px",
         margin: "50px auto",
         textAlign: "center",
-        padding: "20px",
+        padding: "40px 20px",
         border: "2px solid #4CAF50", // Add green border
-        borderRadius: "8px"
+        borderRadius: "15px",
+        boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)"
       }}
     >
-      <h2 style={{ color: "#4CAF50" }}>{isLogin ? "Login" : "Sign Up"}</h2>
+       {/* Add the welcome label */}
+       <h1 style={{ fontSize: "2.5rem", color: "#2C5F2D", marginBottom: "20px", fontFamily: "'Poppins', sans-serif" }}>
+        Welcome to the Learning Space
+      </h1>
+      <h2 style={{ color: "#2C5F2D" }}>{isLogin ? "Login" : "Sign Up"}</h2>
       <form onSubmit={isLogin ? handleLogin : handleSignUp}>
         {isLogin && (
           <>
-            <div style={{ marginBottom: "10px" }}>
-              <label style={{ display: "block", textAlign: "left" }}>Email:</label>
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{ display: "block", textAlign: "left", fontWeight: "bold", color: "#2C5F2D" }}>Email:</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                style={{ width: "100%", padding: "9px", margin: "5px 0", border: "1px solid #ccc", borderRadius: "4px" }}
+                style={{ width: "95%", padding: "10px", margin: "10px 0", border: "1px solid #ccc", borderRadius: "5px" }}
               />
             </div>
-            <div style={{ marginBottom: "10px" }}>
-              <label style={{ display: "block", textAlign: "left" }}>Password:</label>
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{ display: "block", textAlign: "left", fontWeight: "bold" , color: "#2C5F2D"}}>Password:</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                style={{ width: "100%", padding: "9px", margin: "5px 0", border: "1px solid #ccc", borderRadius: "4px" }}
+                style={{ width: "95%", padding: "10px", margin: "10px 0", border: "1px solid #ccc", borderRadius: "5px" }}
               />
             </div>
           </>
@@ -210,17 +249,17 @@ const LoginPage = ({ onLogin }) => {
         {!isLogin && (
           <>
             <div style={{ marginBottom: "10px" }}>
-              <label style={{ display: "block", textAlign: "left" }}>Username:</label>
+              <label style={{ display: "block", textAlign: "left", fontWeight: "bold" ,color: "#2C5F2D"}}>Username:</label>
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                style={{ width: "100%", padding: "9px", margin: "5px 0", border: "1px solid #ccc", borderRadius: "4px" }}
+                style={{ width: "95%", padding: "10px", margin: "5px 0", border: "1px solid #ccc", borderRadius: "5px",color: "#2C5F2D" }}
               />
             </div>
             <div style={{ marginBottom: "10px" }}>
-              <label style={{ display: "block", textAlign: "left" }}>Email:</label>
+              <label style={{ display: "block", textAlign: "left", fontWeight: "bold" ,color: "#2C5F2D"}}>Email:</label>
               <input
                 type="email"
                 value={email}
@@ -229,26 +268,26 @@ const LoginPage = ({ onLogin }) => {
                   setEmail(e.target.value);
                 }}
                 required
-                style={{ width: "100%", padding: "9px", margin: "5px 0", border: "1px solid #ccc", borderRadius: "4px" }}
+                style={{ width: "95%", padding: "10px", margin: "5px 0", border: "1px solid #ccc", borderRadius: "5px" }}
               />
             </div>
-            <div style={{ marginBottom: "10px" }}>
-              <label style={{ display: "block", textAlign: "left" }}>Password:</label>
+            <div style={{ marginBottom: "5px" }}>
+              <label style={{ display: "block", textAlign: "left", fontWeight: "bold" , color: "#2C5F2D"}}>Password:</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                style={{ width: "100%", padding: "9px", margin: "5px 0", border: "1px solid #ccc", borderRadius: "4px" }}
+                style={{ width: "95%", padding: "10px", margin: "5px 0", border: "1px solid #ccc", borderRadius: "5px" , color: "#2C5F2D"}}
               />
             </div>
             <div style={{ marginBottom: "10px" }}>
-              <label style={{ display: "block", textAlign: "left" }}>Profile Picture:</label>
+              <label style={{ display: "block", textAlign: "left", fontWeight: "bold", color: "#2C5F2D" }}>Profile Picture:</label>
               <input
                 type="file"
                 accept="image/*"
                 onChange={handleFileChange}
-                style={{ width: "100%", padding: "9px", margin: "5px 0", border: "1px solid #ccc", borderRadius: "4px" }}
+                style={{ width: "95%", padding: "10px", margin: "5px 0", border: "1px solid #ccc", borderRadius: "5px" }}
               />
             </div>
           </>
@@ -259,23 +298,27 @@ const LoginPage = ({ onLogin }) => {
           style={{
             backgroundColor: "#4CAF50",
             color: "white",
-            padding: "9px 20px",
+            padding: "10px 20px",
             border: "none",
-            borderRadius: "4px",
-            cursor: "pointer"
+            borderRadius: "5px",
+            cursor: "pointer",
+            fontWeight: "bold",
+            transition: "background-color 0.3s ease"
           }}
+          onMouseOver={(e) => e.target.style.backgroundColor = "#45A049"}
+          onMouseOut={(e) => e.target.style.backgroundColor = "#4CAF50"}
         >
           {isLogin ? "Login" : "Sign Up"}
         </button>
       </form>
 
-      <p style={{ marginTop: "10px" }}>
+      <p style={{ marginTop: "10px", fontSize: "14px" }}>
         {isLogin ? (
           <>
             Don't have an account?{" "}
             <span
               onClick={() => handleSwitchMode(false)}
-              style={{ color: "#4CAF50", cursor: "pointer", textDecoration: "underline" }}
+              style={{ color: "#2C5F2D", cursor: "pointer", textDecoration: "underline" }}
             >
               Sign Up
             </span>
@@ -285,7 +328,7 @@ const LoginPage = ({ onLogin }) => {
             Already have an account?{" "}
             <span
               onClick={() => handleSwitchMode(true)}
-              style={{ color: "#4CAF50", cursor: "pointer", textDecoration: "underline" }}
+              style={{ color: "#4CAF50", cursor: "pointer", textDecoration: "underline" ,color: "#2C5F2D"}}
             >
               Login
             </span>
@@ -293,10 +336,10 @@ const LoginPage = ({ onLogin }) => {
         )}
       </p>
 
-      <p>
+      <p style={{ fontSize: "14px" }}>
         <span
           onClick={() => setShowReset(true)}
-          style={{ color: "blue", cursor: "pointer", textDecoration: "underline" }}
+          style={{ color: "#2C5F2D", cursor: "pointer", textDecoration: "underline" }}
         >
           Forgot Password?
         </span>
