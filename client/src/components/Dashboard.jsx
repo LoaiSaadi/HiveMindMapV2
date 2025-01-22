@@ -421,24 +421,24 @@ const Dashboard = ({ user }) => {
         </div>
       )}
 
-      <h3>Your Maps:</h3>
-      <ul className="maps-list">
-        {maps.map((m) => (
-          <li key={m.id} className="map-item-container">
-            <button className="map-button" onClick={() => setSelectedMapId(m.id)}>
-              {m.name || m.id}
-            </button>
-            <button className="delete-button" onClick={() => handleDeleteClick(m.id, m.name)}>
-              <div className="trash-icon">
-                <div className="lid"></div>
-                <div className="bin">
-                  <div className="face"></div>
-                </div>
+      <h3>Your Learning Space:</h3>
+      <div className="maps-grid">
+      {maps.map((m) => (
+        <div key={m.id} className="map-tile">
+          <button className="card-button" onClick={() => setSelectedMapId(m.id)}>
+            {m.name || m.id}
+          </button>
+          <button className="delete-button" onClick={() => handleDeleteClick(m.id, m.name)}>
+            <div className="trash-icon">
+              <div className="lid"></div>
+              <div className="bin">
+                <div className="face"></div>
               </div>
-            </button>
-          </li>
-        ))}
-      </ul>
+            </div>
+          </button>
+        </div>
+      ))}
+    </div>
     </div>
   );
 };

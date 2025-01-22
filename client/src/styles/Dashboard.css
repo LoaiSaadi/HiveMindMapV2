@@ -1,4 +1,6 @@
 
+
+
 .dashboard-header {
     display: flex;
     justify-content: space-between;
@@ -151,8 +153,8 @@ h2 {
 
 .trash-icon {
     position: relative;
-    width: 30px;
-    height: 36px;
+    width: 24px;
+    height: 32px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -161,7 +163,7 @@ h2 {
 .lid {
     position: absolute;
     top: -4px;
-    width: 34px;
+    width: 26px;
     height: 8px;
     background-color: #4CAF50;
     border-radius: 4px;
@@ -172,8 +174,8 @@ h2 {
 .bin {
     position: absolute;
     bottom: 0;
-    width: 30px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     background-color: #4CAF50;
     border-radius: 0 0 6px 6px;
     box-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.2);
@@ -413,6 +415,57 @@ h3 {
     transform: translateY(-3px);
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
   }
+
+
+
+  .maps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+    width: 100%;
+    padding: 20px;
+  }
+  
+  .map-tile {
+    background-color: #ffffff;
+    border: 2px solid #4caf50;
+    border-radius: 10px;
+    padding: 15px;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .map-tile .map-button {
+    background-color: white;
+    color: #4caf50;
+    border: none;
+    padding: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    width: 100%;
+  }
+  
+  .map-tile .map-button:hover {
+    background-color: #5cdb63;
+  }
+  
+  .map-tile .delete-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  
+  .map-tile .trash-icon {
+    width: 24px; /* Adjusted for better visibility */
+    height: 32px;
+  }
+  
   
 
 @media (max-width: 768px) {
@@ -435,3 +488,5 @@ h3 {
         padding: 10px;
     }
 }
+
+
