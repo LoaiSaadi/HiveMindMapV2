@@ -8,6 +8,6 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   databaseURL: "https://mindmapapp-f4b64-default-rtdb.firebaseio.com/",
 });
-
+const db = admin.firestore();
 const auth = admin.auth();
 module.exports = { auth, db };

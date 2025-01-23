@@ -79,5 +79,16 @@ const MapEditorWithParams = () => {
   const { mapId } = useParams(); // Extract mapId from URL
   return <MapEditor mapId={mapId} />;
 };
+const resizeObserverLoopErr = /ResizeObserver loop limit exceeded/;
+
+const originalConsoleError = console.error;
+console.error = (message, ...args) => {
+  if (resizeObserverLoopErr.test(message)) {
+    // Suppress this specific error
+    return;
+  }
+  originalConsoleError(message, ...args);
+};
+
 
 export default App;

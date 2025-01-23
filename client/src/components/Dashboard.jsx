@@ -24,7 +24,8 @@ const Dashboard = ({ user }) => {
   const [email, setEmail] = useState(user.email || "");
   const [error, setError] = useState("");
   const [joinSuccessMessage, setJoinSuccessMessage] = useState("");
-
+  const [searchTerm, setSearchTerm] = useState(""); // State for search term
+  const [allMaps, setAllMaps] = useState([]); // Store all maps fetched from Firebase
   const navigate = useNavigate();
   const [socket, setSocket] = useState(null);
 
@@ -40,7 +41,33 @@ const Dashboard = ({ user }) => {
     });
     return () => unsubscribe();
   }, [user.uid]);
+  useEffect(() => {
+    const colRef = collection(db, "maps");
+    const q = query(colRef, where("participants", "array-contains", user.uid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const userMaps = [];
+      snapshot.forEach((doc) => {
+        userMaps.push({ id: doc.id, ...doc.data() });
+      });
+      setAllMaps(userMaps); // Store all maps in allMaps
+      setMaps(userMaps); // Initialize displayed maps
+    });
+    return () => unsubscribe();
+  }, [user.uid]);
+  const handleSearch = (e) => {
+    const term = e.target.value.toLowerCase();
+    setSearchTerm(term);
 
+    if (term === "") {
+        setMaps(allMaps)
+        return
+    }
+
+    const filteredMaps = allMaps.filter((map) =>
+      map.name.toLowerCase().includes(term)
+    );
+    setMaps(filteredMaps);
+  };
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
@@ -251,7 +278,7 @@ const Dashboard = ({ user }) => {
         <div className="header-left">
           <div className="user-info">
             <img src={profilePicture} alt="Profile" className="profile-picture" />
-            <h2>Hi {username || "User"} ;)</h2>
+            <h2 style={{color:"#2C5F2D" }}>Hi {username || "User"} ;)</h2>
             <button
               className="details-button"
               onClick={() => setShowProfileDetails(true)}
@@ -420,8 +447,17 @@ const Dashboard = ({ user }) => {
           </div>
         </div>
       )}
-
+      
       <h3>Your Learning Space:</h3>
+      <div className="search-container"> {/* Search bar container */}
+        <input
+          type="text"
+          placeholder="Search learning space..."
+          value={searchTerm}
+          onChange={handleSearch}
+          className="search-input"
+        />
+      </div>
       <div className="maps-grid">
       {maps.map((m) => (
         <div key={m.id} className="map-tile">

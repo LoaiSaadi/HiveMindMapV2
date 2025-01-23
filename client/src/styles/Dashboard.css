@@ -7,6 +7,8 @@
     align-items: center;
     margin-bottom: 20px;
     width: 100%;
+    padding: 0 20px; /* Add some horizontal padding */
+    box-sizing: border-box; /* Very Important to keep content inside */
 }
 .header-left {
     display: flex;
@@ -14,7 +16,17 @@
     gap: 15px;
     flex-grow: 1;
 }
-
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-grow: 1; /* Allow left side to take up available space */
+}
+.user-text{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
 .header-right {
     display: flex;
     justify-content: flex-end;
@@ -23,7 +35,7 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    
+    gap: 10px; 
 }
 
 .profile-picture {
@@ -32,11 +44,12 @@
     border-radius: 50%;
     object-fit: cover;
     border: 2px solid #4caf50;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
 }
 /* Buttons */
 .action-button {
     background-color: #4caf50;
-    color: white;
+    color: #2C5F2D;
     border: none;
     padding: 10px 20px;
     cursor: pointer;
@@ -50,11 +63,30 @@
     transform: translateY(-2px);
 }
 
+.details-button {
+    background-color: transparent;
+    border: 1px solid #4caf50; /* Add a border */
+    color: #e5e6e5;
+    padding: 6px 12px; /* Adjust padding */
+    border-radius: 5px; /* Add rounded corners */
+    cursor: pointer;
+    display: inline-flex; /* Use flexbox for icon alignment */
+    align-items: center;
+    gap: 5px; /* Space between icon and text */
+    transition: background-color 0.3s, color 0.3s, border-color 0.3s; /* Add transitions */
+    font-size: 0.9rem;
+}
 
-
+.details-button:hover {
+    background-color: #4caf50; /* Green background on hover */
+    color: white;
+    border-color: #388e3c;
+    text-decoration: none;
+}
 
 
 .dashboard-container {
+    background: linear-gradient(to right, #A8E063, rgb(152, 212, 124));
     padding: 30px 50px; /* Added horizontal padding for spacing */
     background-color: #f4f7f6;
     min-height: 100vh;
@@ -93,7 +125,7 @@
   }
   
   .close-button {
-    background: #007bff;
+    background: #ff1500;
     color: white;
     border: none;
     padding: 10px 20px;
@@ -131,11 +163,39 @@
 }
 
  
-  .modal-buttons {
+.modal-buttons {
     display: flex;
     justify-content: space-between;
-  }
+}
+.search-container {
+    width: 250px; /* Fixed width for search */
+    position: relative; /* For the possible magnifying glass icon */
+}
 
+.search-input {
+    width: 100%;
+    padding: 10px 35px 10px 10px; /* Added padding for icon */
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+    box-sizing: border-box;
+    transition: border-color 0.3s;
+}
+
+.search-input:focus {
+    border-color: #4caf50;
+    outline: none;
+}
+.search-container::after {
+    content: "\1F50D"; /* Unicode for magnifying glass */
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    font-size: 18px;
+    color: #aaa;
+    pointer-events: none; /* Make icon non-clickable */
+}
 .header {
     display: flex;
     justify-content: space-between;
@@ -309,6 +369,7 @@ h3 {
     animation: borderAnimation 3s linear infinite;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     overflow: hidden;
+    color: #2C5F2D;
 }
 
 .delete-button {
