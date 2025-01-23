@@ -9,7 +9,7 @@ import ReactFlow, {
   Panel,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import { doc, updateDoc, onSnapshot, setDoc,collection } from "firebase/firestore";
+import { doc, updateDoc, onSnapshot, setDoc,collection, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import io from "socket.io-client";
 import { useNavigate } from "react-router-dom";
@@ -114,7 +114,7 @@ const MapEditor = ({ mapId }) => {
   const [cursors, setCursors] = useState({});
   const reactFlowWrapper = useRef(null); // Ref for ReactFlow wrapper
   const [disableShortcuts, setDisableShortcuts] = useState(false);
-
+  const [nodeCreators, setNodeCreators] = useState({})
 
   // Refs to track previous state
   const prevNodesRef = useRef(nodes);
@@ -273,24 +273,36 @@ const MapEditor = ({ mapId }) => {
     [nodes, updateFirebase]
   );
 
-  const addNode = useCallback((position = { x: Math.random() * 400, y: Math.random() * 400 }) => {
+  const addNode = useCallback(async (position = { x: Math.random() * 400, y: Math.random() * 400 }) => {
     const newNodeId = nodes.length ? Math.max(...nodes.map((node) => parseInt(node.id))) + 1 : 1;
-  
+    const auth = getAuth();
+    const currentUser = auth.currentUser;
+
     const newNode = {
       id: newNodeId.toString(),
       data: { label: `Node ${newNodeId}` },
-      position, // Use the passed position
+      position,
       style: { border: `2px solid ${borderColor}` },
+      creator: currentUser?.uid || "unknown", // Store creator UID
+      creationTimestamp: new Date().toISOString(), // Store creation timestamp
     };
-  
+
     setNodes((nds) => {
       const updatedNodes = [...nds, newNode];
       updateFirebase(updatedNodes, edges);
       return updatedNodes;
     });
-  
+
     setNodeId((id) => id + 1);
     socket.emit("node-added", newNode);
+
+    // Fetch and store creator info immediately after adding the node
+    if (currentUser) {
+        const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+        if (userDoc.exists()) {
+            setNodeCreators(prev => ({...prev, [newNode.id]: userDoc.data()}))
+        }
+    }
   }, [nodes, edges, updateFirebase, borderColor]);
   
 
@@ -317,7 +329,43 @@ const MapEditor = ({ mapId }) => {
       )
     );
   };
+  useEffect(() => {
+    const fetchNodeCreators = async () => {
+        const creatorIds = [...new Set(nodes.map(n => n.creator).filter(c => c !== "unknown"))];
+
+        if (creatorIds.length === 0) { // Add this check
+            return; // Exit early if no creator IDs
+        }
+
+        const newCreators = {};
+        for (const creatorId of creatorIds) {
+            try { //Add try catch for error handling
+                const userDoc = await getDoc(doc(db, "users", creatorId));
+                if (userDoc.exists()) {
+                    newCreators[creatorId] = userDoc.data();
+                }
+            } catch (error) {
+                console.error("Error fetching creator data:", error);
+            }
+        }
+        setNodeCreators(prev => {
+            const existingCreators = {...prev};
+            for (const creatorId in newCreators){
+                existingCreators[creatorId] = newCreators[creatorId];
+            }
+            return existingCreators;
+        });
+    }
+
+    if (nodes.length > 0) {
+        fetchNodeCreators();
+    }
+}, [nodes]);
   const renderNode = (node) => {
+    const creatorInfo = nodeCreators[node.creator];
+    const creationDate = new Date(node.creationTimestamp).toLocaleDateString();
+    const creatorName = creatorInfo?.displayName || (node.creator === "unknown" ? "Unknown Creator" : "Fetching..."); // Handle "unknown"
+    const creatorPhoto = creatorInfo?.photoURL;
     if (node.data.isEditing) {
       return (
         <input
@@ -341,9 +389,59 @@ const MapEditor = ({ mapId }) => {
         />
       );
     }
-    return <span>{node.data.label}</span>;
+
+    return (
+      <div style={{ position: 'relative', width: '100%', height: '100%'}}>
+        <div style={{
+          position: 'absolute',
+          top: '-30px', // Adjust as needed
+          left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: 'rgba(255, 255, 255, 0.8)',
+          padding: '5px',
+          borderRadius: '5px',
+          fontSize: '10px',
+          whiteSpace: 'nowrap',
+          zIndex: 10,
+          display: 'flex',
+          alignItems: 'center',
+        }}>
+           {creatorInfo?.photoURL && (
+                <img
+                    src={creatorInfo.photoURL}
+                    alt="Creator Avatar"
+                    style={{
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        marginRight: '5px',
+                    }}
+                />
+            )}
+          {creatorInfo?.displayName || "Unknown"} ({creationDate})
+        </div>
+        {node.data.isEditing ? (
+          <input
+            // ... (existing input code)
+          />
+        ) : (
+          <span>{node.data.label}</span>
+        )}
+      </div>
+    );
   };
-  
+  useEffect(() => {
+    const mapRef = doc(db, "maps", mapId);
+
+    const unsubscribe = onSnapshot(mapRef, (doc) => {
+        if (doc.exists()) {
+            const mapData = doc.data();
+            // ... other state updates
+            setNodes(mapData.nodes || []); // Update nodes first
+        }
+    });
+    return () => unsubscribe();
+}, [mapId]);
   const onDelete = useCallback(() => {
     const remainingNodes = nodes.filter((node) => !selectedElements.includes(node.id));
     const remainingEdges = edges.filter((edge) => !selectedElements.includes(edge.id));
