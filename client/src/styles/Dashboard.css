@@ -86,7 +86,7 @@
 
 
 .dashboard-container {
-    background: linear-gradient(to right, #A8E063, rgb(152, 212, 124));
+    background: linear-gradient(to right, rgb(206, 240, 164),rgb(185, 247, 156));
     padding: 30px 50px; /* Added horizontal padding for spacing */
     background-color: #f4f7f6;
     min-height: 100vh;

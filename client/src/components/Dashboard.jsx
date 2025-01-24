@@ -137,7 +137,7 @@ const Dashboard = ({ user }) => {
       console.error("Error processing file:", error);
       setError("Failed to process the file. Please try again.");
     }
-  };
+  }; 
 
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
@@ -448,7 +448,7 @@ const Dashboard = ({ user }) => {
         </div>
       )}
       
-      <h3>Your Learning Space:</h3>
+      <h3 style={{color:"#2C5F2D" }}>Your Learning Space:</h3>
       <div className="search-container"> {/* Search bar container */}
         <input
           type="text"

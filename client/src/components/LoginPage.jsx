@@ -174,19 +174,9 @@ const LoginPage = ({ onLogin }) => {
           {error && <p style={{ color: "red", fontSize: "0.9rem" }}>{error}</p>}
           <button
             type="submit"
-            style={{
-              backgroundColor: "#4CAF50",
-              color: "#2C5F2D",
-              border: "none",
-              padding: "12px 25px",
-              borderRadius: "8px",
-              cursor: "pointer",
-              fontWeight: "bold",
-              transition: "background-color 0.3s ease",
-              fontSize: "1rem"
-            }}
-            onMouseOver={(e) => e.target.style.backgroundColor = "#45A049"}
-            onMouseOut={(e) => e.target.style.backgroundColor = "#4CAF50"}
+            className="card-button"
+            // onMouseOver={(e) => e.target.style.backgroundColor = "#45A049"}
+            // onMouseOut={(e) => e.target.style.backgroundColor = "#4CAF50"}
           >
             Send Reset Email
           </button>
@@ -206,7 +196,7 @@ const LoginPage = ({ onLogin }) => {
   return (
     <div
       style={{
-        background: "linear-gradient(to right, #A8E063,rgb(152, 212, 124))",
+        background: "linear-gradient(to right,rgb(206, 240, 164),rgb(185, 247, 156))",
         maxWidth: "650px",
         margin: "50px auto",
         textAlign: "center",
@@ -221,7 +211,7 @@ const LoginPage = ({ onLogin }) => {
         Welcome to the Learning Space
       </h1>
       <h2 style={{ color: "#2C5F2D" }}>{isLogin ? "Login" : "Sign Up"}</h2>
-      <form onSubmit={isLogin ? handleLogin : handleSignUp}>
+      <form onSubmit ={isLogin ? handleLogin : handleSignUp}>
         {isLogin && (
           <>
             <div style={{ marginBottom: "20px" }}>
@@ -295,18 +285,9 @@ const LoginPage = ({ onLogin }) => {
         {error && <p style={{ color: "red" }}>{error}</p>}
         <button
           type="submit"
-          style={{
-            backgroundColor: "#4CAF50",
-            color: "white",
-            padding: "10px 20px",
-            border: "none",
-            borderRadius: "5px",
-            cursor: "pointer",
-            fontWeight: "bold",
-            transition: "background-color 0.3s ease"
-          }}
-          onMouseOver={(e) => e.target.style.backgroundColor = "#45A049"}
-          onMouseOut={(e) => e.target.style.backgroundColor = "#4CAF50"}
+          className="card-button"
+          // onMouseOver={(e) => e.target.style.backgroundColor = "#45A049"}
+          // onMouseOut={(e) => e.target.style.backgroundColor = "#4CAF50"}
         >
           {isLogin ? "Login" : "Sign Up"}
         </button>
@@ -344,21 +325,7 @@ const LoginPage = ({ onLogin }) => {
           Forgot Password?
         </span>
       </p>
-      <div>
-        <div
-          className="tenor-gif-embed"
-          data-postid="10521569059124562392"
-          data-share-method="host"
-          data-aspect-ratio="1.2"
-          data-width="100%"
-          style={{ width: '50px', height: '50px', display: 'inline-block' }}
-        >
-          <a href="https://tenor.com/view/milk-and-mocha-gif-10521569059124562392">Milk And Mocha Sticker</a>
-          from
-          <a href="https://tenor.com/search/milk+and+mocha-stickers">Milk And Mocha Stickers</a>
-        </div>
-        <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
-      </div>
+      
     </div>
   );
 };

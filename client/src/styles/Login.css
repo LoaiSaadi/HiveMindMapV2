@@ -54,3 +54,24 @@
     text-align: center;
     margin-bottom: 15px;
 }
+
+.card-button {
+    background-color: white;
+    border: 1px solid #ccc;
+    padding: 15px 30px;
+    margin: 10px;
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    color: black;
+  }
+  
+  .card-button:hover {
+    background-color: #4CAF50; /* Change background to green on hover */
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  }
+
