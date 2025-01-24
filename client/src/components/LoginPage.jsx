@@ -196,7 +196,7 @@ const LoginPage = ({ onLogin }) => {
   return (
     <div
       style={{
-        background: "linear-gradient(to right,rgb(206, 240, 164),rgb(185, 247, 156))",
+        background: "linear-gradient(to right,#d9fdd3, rgb(206, 240, 164))",
         maxWidth: "650px",
         margin: "50px auto",
         textAlign: "center",

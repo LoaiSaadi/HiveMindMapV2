@@ -181,17 +181,152 @@ const MapEditor = ({ mapId }) => {
     },
     [mapId, currentUserId]
   );
+  // const onConnect = useCallback(
+  //   (params) => {
+  //     setEdges((eds) => {
+  //       const updatedEdges = addEdge(params, eds);
+  //       updateFirebase(nodes, updatedEdges); // update Firebase only when there's a real change
+  //       return updatedEdges;
+  //     });
+  //     socket.emit("edge-added", params);
+  //   },
+  //   [nodes, updateFirebase]
+  // );
+
+  // const onConnect = useCallback(
+  //   (params) => {
+  //     // Show a prompt or modal to the user to select the edge style
+  //     const edgeStyle = window.prompt(
+  //       "Choose edge style: 'arrow', 'no-arrow', or 'dashed'"
+  //     );
+  
+  //     // Define the edge style based on the user's choice
+  //     let edgeOptions = {};
+  //     switch (edgeStyle) {
+  //       case "arrow":
+  //         edgeOptions = { markerEnd: { type: "arrowclosed" } };
+  //         break;
+  //       case "dashed":
+  //         edgeOptions = { style: { strokeDasharray: "5,5" } };
+  //         break;
+  //       case "no-arrow":
+  //       default:
+  //         edgeOptions = {}; // Default solid line without arrow
+  //         break;
+  //     }
+  
+  //     // Add the new edge with the chosen style
+  //     setEdges((eds) => {
+  //       const updatedEdges = addEdge({ ...params, ...edgeOptions }, eds);
+  //       updateFirebase(nodes, updatedEdges); // Update Firebase
+  //       return updatedEdges;
+  //     });
+  
+  //     // Emit the event to other clients
+  //     socket.emit("edge-added", { ...params, ...edgeOptions });
+  //   },
+  //   [nodes, updateFirebase]
+  // );
+
+
   const onConnect = useCallback(
     (params) => {
-      setEdges((eds) => {
-        const updatedEdges = addEdge(params, eds);
-        updateFirebase(nodes, updatedEdges); // update Firebase only when there's a real change
-        return updatedEdges;
-      });
-      socket.emit("edge-added", params);
+      // Create the modal container
+      const modal = document.createElement("div");
+      modal.style.position = "fixed";
+      modal.style.top = "50%";
+      modal.style.left = "50%";
+      modal.style.transform = "translate(-50%, -50%)";
+      modal.style.backgroundColor = "white";
+      modal.style.padding = "20px";
+      modal.style.border = "1px solid #ccc";
+      modal.style.boxShadow = "0px 4px 6px rgba(0, 0, 0, 0.1)";
+      modal.style.zIndex = "1000";
+      modal.style.textAlign = "center";
+  
+      // Create a title for the modal
+      const title = document.createElement("h3");
+      title.innerText = "Choose Edge Style";
+      modal.appendChild(title);
+  
+      // Helper function to create buttons
+      const createButton = (label, svgContent, styleCallback) => {
+        const button = document.createElement("button");
+        button.style.margin = "10px";
+        button.style.padding = "10px";
+        button.style.border = "1px solid #ddd";
+        button.style.backgroundColor = "#f9f9f9";
+        button.style.cursor = "pointer";
+        button.innerHTML = svgContent;
+        button.onclick = () => {
+          styleCallback();
+          document.body.removeChild(modal); // Close modal
+        };
+        modal.appendChild(button);
+      };
+  
+      // Add arrow button
+      createButton(
+        "Arrow",
+        `<svg height="30" width="80">
+           <line x1="0" y1="15" x2="60" y2="15" stroke="black" stroke-width="2" />
+           <polygon points="60,10 70,15 60,20" fill="black" />
+         </svg>`,
+        () => {
+          setEdges((eds) => {
+            const updatedEdges = addEdge(
+              { ...params, markerEnd: { type: "arrowclosed" } },
+              eds
+            );
+            updateFirebase(nodes, updatedEdges);
+            return updatedEdges;
+          });
+          socket.emit("edge-added", { ...params, markerEnd: { type: "arrowclosed" } });
+        }
+      );
+  
+      // Add dashed button
+      createButton(
+        "Dashed",
+        `<svg height="30" width="80">
+           <line x1="0" y1="15" x2="70" y2="15" stroke="black" stroke-width="2" stroke-dasharray="5,5" />
+         </svg>`,
+        () => {
+          setEdges((eds) => {
+            const updatedEdges = addEdge(
+              { ...params, style: { strokeDasharray: "5,5" } },
+              eds
+            );
+            updateFirebase(nodes, updatedEdges);
+            return updatedEdges;
+          });
+          socket.emit("edge-added", { ...params, style: { strokeDasharray: "5,5" } });
+        }
+      );
+  
+      // Add no-arrow button
+      createButton(
+        "No Arrow",
+        `<svg height="30" width="80">
+           <line x1="0" y1="15" x2="70" y2="15" stroke="black" stroke-width="2" />
+         </svg>`,
+        () => {
+          setEdges((eds) => {
+            const updatedEdges = addEdge({ ...params }, eds);
+            updateFirebase(nodes, updatedEdges);
+            return updatedEdges;
+          });
+          socket.emit("edge-added", { ...params });
+        }
+      );
+  
+      // Add the modal to the document
+      document.body.appendChild(modal);
     },
     [nodes, updateFirebase]
   );
+  
+  
   
   const handleNoteChange = (event) => {
     const newNote = event.target.value;
@@ -413,7 +548,7 @@ const renderNode = (node) => {
     <div style={{ position: 'relative', width: '100%', height: '100%'}}>
       <div style={{
         position: 'absolute',
-        top: '-30px', // Adjust as needed
+        top: '-50px', // Adjust as needed
         left: '50%',
         transform: 'translateX(-50%)',
         backgroundColor: 'rgba(255, 255, 255, 0.8)',
@@ -657,7 +792,7 @@ const renderNode = (node) => {
     <div
       style={{
         padding: "4px 8px",
-        background: cursor.color,
+        background: "#2C5F2D",
         color: "white", // Ensure text contrast
         fontWeight: "bold",
         fontSize: "12px",
