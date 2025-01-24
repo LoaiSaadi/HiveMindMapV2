@@ -277,6 +277,8 @@ const MapEditor = ({ mapId }) => {
     const newNodeId = nodes.length ? Math.max(...nodes.map((node) => parseInt(node.id))) + 1 : 1;
     const auth = getAuth();
     const currentUser = auth.currentUser;
+    // console.log("l;l;l;l;ll;;l;")
+    // console.log(currentUser.displayName)
 
     const newNode = {
       id: newNodeId.toString(),
@@ -361,75 +363,101 @@ const MapEditor = ({ mapId }) => {
         fetchNodeCreators();
     }
 }, [nodes]);
-  const renderNode = (node) => {
-    const creatorInfo = nodeCreators[node.creator];
-    const creationDate = new Date(node.creationTimestamp).toLocaleDateString();
-    const creatorName = creatorInfo?.displayName || (node.creator === "unknown" ? "Unknown Creator" : "Fetching..."); // Handle "unknown"
-    const creatorPhoto = creatorInfo?.photoURL;
-    if (node.data.isEditing) {
-      return (
-        <input
-          type="text"
-          value={node.data.label}
-          onFocus={() => setDisableShortcuts(true)} // Disable shortcuts
-          onBlur={() => {
+
+
+
+
+
+
+
+const renderNode = (node) => {
+  const creatorInfo = nodeCreators[node.creator];
+  console.log(creatorInfo);
+
+  const creationDate = new Date(node.creationTimestamp).toLocaleDateString();
+  // const creatorName = creatorInfo?.displayName || (node.creator === "unknown" ? "Unknown Creator" : "Fetching...");
+  // const creatorPhoto = creatorInfo?.profilePicture;
+
+  // Check if creatorInfo exists before accessing properties
+  const creatorUsername = creatorInfo?.username || "Unknown Username"; 
+
+  if (node.data.isEditing) {
+    return (
+      <input
+        type="text"
+        value={node.data.label}
+        onFocus={() => setDisableShortcuts(true)} // Disable shortcuts
+        onBlur={() => {
+          handleLabelBlur(node.id);
+          setDisableShortcuts(false); // Enable shortcuts
+        }}
+        onChange={(e) => handleLabelChange(e, node.id)}
+        onKeyDown={(e) => {
+          e.stopPropagation(); // Prevent global `keydown`
+          if (e.key === "Enter") {
             handleLabelBlur(node.id);
             setDisableShortcuts(false); // Enable shortcuts
-          }}
-          onChange={(e) => handleLabelChange(e, node.id)}
-          onKeyDown={(e) => {
-            e.stopPropagation(); // Prevent global `keydown`
-            if (e.key === "Enter") {
-              handleLabelBlur(node.id);
-              setDisableShortcuts(false); // Enable shortcuts
-            }
-          }}
-          autoFocus
-          style={{ width: "100%" }}
-        />
-      );
-    }
-
-    return (
-      <div style={{ position: 'relative', width: '100%', height: '100%'}}>
-        <div style={{
-          position: 'absolute',
-          top: '-30px', // Adjust as needed
-          left: '50%',
-          transform: 'translateX(-50%)',
-          backgroundColor: 'rgba(255, 255, 255, 0.8)',
-          padding: '5px',
-          borderRadius: '5px',
-          fontSize: '10px',
-          whiteSpace: 'nowrap',
-          zIndex: 10,
-          display: 'flex',
-          alignItems: 'center',
-        }}>
-           {creatorInfo?.photoURL && (
-                <img
-                    src={creatorInfo.photoURL}
-                    alt="Creator Avatar"
-                    style={{
-                        width: '20px',
-                        height: '20px',
-                        borderRadius: '50%',
-                        marginRight: '5px',
-                    }}
-                />
-            )}
-          {creatorInfo?.displayName || "Unknown"} ({creationDate})
-        </div>
-        {node.data.isEditing ? (
-          <input
-            // ... (existing input code)
-          />
-        ) : (
-          <span>{node.data.label}</span>
-        )}
-      </div>
+          }
+        }}
+        autoFocus
+        style={{ width: "100%" }}
+      />
     );
-  };
+  }
+
+  return (
+    <div style={{ position: 'relative', width: '100%', height: '100%'}}>
+      <div style={{
+        position: 'absolute',
+        top: '-30px', // Adjust as needed
+        left: '50%',
+        transform: 'translateX(-50%)',
+        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+        padding: '5px',
+        borderRadius: '5px',
+        fontSize: '10px',
+        whiteSpace: 'nowrap',
+        zIndex: 10,
+        display: 'flex',
+        alignItems: 'center',
+      }}>
+        {creatorInfo?.profilePicture && (
+          <img
+            src={creatorInfo.profilePicture}
+            alt="Creator Avatar"
+            style={{
+              width: '20px',
+              height: '20px',
+              borderRadius: '50%',
+              marginRight: '5px',
+            }}
+          />
+        )}
+        <span>{creatorUsername}</span> ({creationDate})
+      </div>
+      {node.data.isEditing ? (
+        <input
+          // ... (existing input code)
+        />
+      ) : (
+        <span>{node.data.label}</span>
+      )}
+    </div>
+  );
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
   useEffect(() => {
     const mapRef = doc(db, "maps", mapId);
 
