@@ -65,23 +65,21 @@
 
 .details-button {
     background-color: transparent;
-    border: 1px solid #4caf50; /* Add a border */
-    color: #e5e6e5;
-    padding: 6px 12px; /* Adjust padding */
-    border-radius: 5px; /* Add rounded corners */
+    border: none; /* Remove border */
+    color: #4caf50; /* Icon color */
     cursor: pointer;
-    display: inline-flex; /* Use flexbox for icon alignment */
+    display: inline-flex; /* Flexbox for alignment */
     align-items: center;
-    gap: 5px; /* Space between icon and text */
-    transition: background-color 0.3s, color 0.3s, border-color 0.3s; /* Add transitions */
-    font-size: 0.9rem;
+    justify-content: center; /* Center the icon */
+    font-size: 1.2rem; /* Adjust icon size */
+    padding: 8px; /* Add spacing */
+    border-radius: 50%; /* Circle shape for the button */
+    transition: background-color 0.3s, color 0.3s; /* Smooth transitions */
 }
 
 .details-button:hover {
-    background-color: #4caf50; /* Green background on hover */
-    color: white;
-    border-color: #388e3c;
-    text-decoration: none;
+    background-color: #4caf50; /* Add a subtle background on hover */
+    color: white; /* Change icon color */
 }
 
 

@@ -21,6 +21,30 @@
     box-shadow: 0 0 5px rgba(0,0,0,0.1);
   }
   
+
+  
+
+  .home-button {
+    background-color: transparent;
+    border: 2px dashed #4caf50; /* Dashed border with color */
+    color: #4caf50; /* Icon color */
+    cursor: pointer;
+    display: inline-flex; /* Flexbox for alignment */
+    align-items: center;
+    justify-content: center; /* Center the icon */
+    font-size: 1rem; /* Smaller font size */
+    padding: 5px; /* Less spacing */
+    border-radius: 50%; /* Circle shape for the button */
+    transition: background-color 0.3s, color 0.3s, border-color 0.3s; /* Smooth transitions */
+}
+
+.home-button:hover {
+    background-color: #4caf50; /* Add a subtle background on hover */
+    color: white; /* Change icon color */
+    border-color: #388e3c; /* Change border color on hover */
+}
+
+
   /* Sidebar */
   .map-editor-sidebar {
     width: 250px;

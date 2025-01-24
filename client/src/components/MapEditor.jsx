@@ -15,6 +15,7 @@ import io from "socket.io-client";
 import { useNavigate } from "react-router-dom";
 import ParticipantBox from "./ParticipantBox";
 import { getAuth } from "firebase/auth";
+import "../styles/MapEditor.css";
 // Add this new component
 const ContextMenu = ({ onClick, onClose, position, onRename }) => {
   if (!position) return null;
@@ -831,15 +832,17 @@ const renderNode = (node) => {
       </div>
 
       <div style={{zIndex:1000, position:"absolute" ,  width: "20%", padding: "10px",right: "0",top:"0", background: "#f4f4f4",height: "100%",overflowY: "auto",boxShadow: "0 0 10px rgba(0, 0, 0, 0.1)", }}>
-        <h3>Map Details</h3>
+        <h3 style={{ color: "#2C5F2D" }}>Map Details</h3>
         
         
         {/* <button onClick={onDelete} style={{ marginBottom: "10px" }}>Delete Selected</button> */}
-        <button onClick={refreshPage} style={{ marginBottom: "10px" }}>
-          Home Page
-        </button>
         <div>
-          <label style={{ color: "#388e3c" }}>Map Name:</label>
+          <button className="home-button" onClick={refreshPage}>
+            Home Page
+          </button>
+        </div>
+        <div>
+          <label style={{ color: "#2C5F2D" }}>Map Name:</label>
           <input
             type="text"
             value={mapName}
@@ -850,7 +853,7 @@ const renderNode = (node) => {
           />
         </div>
         <div>
-          <label style={{ color: "#388e3c" }}>Map Description:</label>
+          <label style={{ color: "#2C5F2D" }}>Map Description:</label>
           <textarea
             value={mapDescription}
             onChange={(e) => setMapDescription(e.target.value)}
@@ -860,11 +863,11 @@ const renderNode = (node) => {
           />
         </div>
         <div>
-          <label style={{ color: "#388e3c" }}>Map ID:</label>
+          <label style={{ color: "#2C5F2D" }}>Map ID:</label>
           <p>{mapId}</p>
         </div>
         <div>
-          <label style={{ color: "#388e3c" }}>Last Edited:</label>
+          <label style={{ color: "#2C5F2D" }}>Last Edited:</label>
           <p>{lastEdited}</p>
         </div>
 
