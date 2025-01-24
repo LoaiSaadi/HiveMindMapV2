@@ -116,6 +116,10 @@ const MapEditor = ({ mapId }) => {
   const [disableShortcuts, setDisableShortcuts] = useState(false);
   const [nodeCreators, setNodeCreators] = useState({})
 
+
+  const [showNodeDetails, setShowNodeDetails] = useState(false);
+
+
   // Refs to track previous state
   const prevNodesRef = useRef(nodes);
   const prevEdgesRef = useRef(edges);
@@ -568,6 +572,7 @@ const renderNode = (node) => {
   const onNodeClick = useCallback((event, node) => {
     setSelectedNode(node); // Set the selected node
     setBorderColor(node.style?.border?.split(" ")[2] || "#000000"); // Extract the current border color
+    setShowNodeDetails(true);
   }, []);
 
   // Update the selected node's border color
@@ -727,84 +732,95 @@ const renderNode = (node) => {
           <label style={{ color: "#388e3c" }}>Last Edited:</label>
           <p>{lastEdited}</p>
         </div>
-        {/* Color Picker for Selected Node's Border */}
-        {selectedNode && (
-          <div style={{ marginTop: "20px", padding: "10px", border: "1px solid #ccc", borderRadius: "8px", backgroundColor: "#fff" }}>
-            <h4 style={{ marginBottom: "10px", textAlign: "center", color: "#00796b" }}>
-              Node Details
-            </h4>
-            <div style={{ marginBottom: "15px" }}>
-              <label style={{ display: "block", fontWeight: "bold", marginBottom: "5px", color: "#388e3c" }}>
-                Border Color:
-              </label>
-              <input
-                type="color"
-                value={borderColor}
-                onChange={(e) => handleBorderColorChange(e.target.value)} 
-                style={{ width: "100%", height: "40px", borderRadius: "5px", border: "1px solid #ccc" }}
-              />
-            </div>
-            <div>
-              <label style={{ display: "block", fontWeight: "bold", marginBottom: "5px", color: "#388e3c" }}>
-                Notes:
-              </label>
-              <textarea
-                ref={noteInputRef}
-                value={nodeNotes[selectedNode.id] || ""}
-                onChange={handleNoteChange}
-                onBlur={handleNoteBlur}
-                placeholder="Add a note for this node"
-                style={{
-                  width: "80%",
-                  height: "50px",
-                  padding: "10px",
-                  borderRadius: "8px",
-                  border: "1px solid #ccc",
-                  fontSize: "14px",
-                  fontFamily: "'Arial', sans-serif",
-                  backgroundColor: "#f9f9f9",
-                  resize: "none",
-                }}
-              />
-            </div>
 
-            {/* Link Input */}
-            <div style={{ marginBottom: "15px" }}>
-              <label style={{ display: "block", fontWeight: "bold", marginBottom: "5px", color: "#388e3c" }}>
-                Link:
-              </label>
-              <input
-                type="text"
-                value={nodeData[selectedNode.id]?.link || ""}
-                onChange={(e) => handleLinkChange(e.target.value)}
-                placeholder="Add a link"
-                style={{
-                  width: "80%",
-                  padding: "10px",
-                  borderRadius: "8px",
-                  border: "1px solid #ccc",
-                }}
-              />
-            </div>
-            {selectedNode && nodeData[selectedNode.id]?.link && (
-              <div style={{ marginTop: "15px" }}>
-                <label style={{ fontWeight: "bold", color: "#388e3c" }}>Link:</label>
-                <a 
-                  href={nodeData[selectedNode.id].link} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  style={{ wordBreak: "break-word" }}
-                >
-                  {nodeData[selectedNode.id].link}
-                </a>
+
+
+
+
+        
+        <div style={{ zIndex: 1000, position: "absolute", width: "100%", right: "0", top: "0", background: "#f4f4f4", height: "100%", overflowY: "auto", boxShadow: "0 0 10px rgba(0, 0, 0, 0.1)", transition: "transform 0.3s", transform: showNodeDetails ? "translateX(0)" : "translateX(100%)" }}>
+        <button onClick={() => setShowNodeDetails(false)} style={{ position: "absolute", top: "10px", left: "10px" }}>
+          Exit
+        </button>
+          {/* Color Picker for Selected Node's Border */}
+          {selectedNode && (
+            <div style={{ marginTop: "20px", padding: "10px", border: "1px solid #ccc", borderRadius: "8px", backgroundColor: "#fff" }}>
+              <h4 style={{ marginBottom: "10px", textAlign: "center", color: "#00796b" }}>
+                Node Details
+              </h4>
+              <div style={{ marginBottom: "15px" }}>
+                <label style={{ display: "block", fontWeight: "bold", marginBottom: "5px", color: "#388e3c" }}>
+                  Border Color:
+                </label>
+                <input
+                  type="color"
+                  value={borderColor}
+                  onChange={(e) => handleBorderColorChange(e.target.value)} 
+                  style={{ width: "100%", height: "40px", borderRadius: "5px", border: "1px solid #ccc" }}
+                />
               </div>
-              
-            )}
+              <div>
+                <label style={{ display: "block", fontWeight: "bold", marginBottom: "5px", color: "#388e3c" }}>
+                  Notes:
+                </label>
+                <textarea
+                  ref={noteInputRef}
+                  value={nodeNotes[selectedNode.id] || ""}
+                  onChange={handleNoteChange}
+                  onBlur={handleNoteBlur}
+                  placeholder="Add a note for this node"
+                  style={{
+                    width: "80%",
+                    height: "50px",
+                    padding: "10px",
+                    borderRadius: "8px",
+                    border: "1px solid #ccc",
+                    fontSize: "14px",
+                    fontFamily: "'Arial', sans-serif",
+                    backgroundColor: "#f9f9f9",
+                    resize: "none",
+                  }}
+                />
+              </div>
+
+              {/* Link Input */}
+              <div style={{ marginBottom: "15px" }}>
+                <label style={{ display: "block", fontWeight: "bold", marginBottom: "5px", color: "#388e3c" }}>
+                  Link:
+                </label>
+                <input
+                  type="text"
+                  value={nodeData[selectedNode.id]?.link || ""}
+                  onChange={(e) => handleLinkChange(e.target.value)}
+                  placeholder="Add a link"
+                  style={{
+                    width: "80%",
+                    padding: "10px",
+                    borderRadius: "8px",
+                    border: "1px solid #ccc",
+                  }}
+                />
+              </div>
+              {selectedNode && nodeData[selectedNode.id]?.link && (
+                <div style={{ marginTop: "15px" }}>
+                  <label style={{ fontWeight: "bold", color: "#388e3c" }}>Link:</label>
+                  <a 
+                    href={nodeData[selectedNode.id].link} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{ wordBreak: "break-word" }}
+                  >
+                    {nodeData[selectedNode.id].link}
+                  </a>
+                </div>
+                
+              )}
 
 
 
+            </div>
+          )}
           </div>
-        )}
 
         <ParticipantBox mapId={mapId} currentUserId={currentUserId} />
 
