@@ -7,6 +7,7 @@ import ReactFlow, {
   useEdgesState,
   useNodesState,
   Panel,
+
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { doc, updateDoc, onSnapshot, setDoc,collection, getDoc } from "firebase/firestore";
@@ -116,8 +117,7 @@ const MapEditor = ({ mapId }) => {
   const reactFlowWrapper = useRef(null); // Ref for ReactFlow wrapper
   const [disableShortcuts, setDisableShortcuts] = useState(false);
   const [nodeCreators, setNodeCreators] = useState({})
-
-
+  const nodeDetailsPanelRef = useRef(null); 
   const [showNodeDetails, setShowNodeDetails] = useState(false);
 
 
@@ -228,7 +228,41 @@ const MapEditor = ({ mapId }) => {
   //   },
   //   [nodes, updateFirebase]
   // );
+  useEffect(() => {
+    const handleClickOnMap = (event) => {
+      // Check if the click is within the map background
+      if (
+        showNodeDetails &&
+        reactFlowWrapper.current && // Ensure the ref is set
+        reactFlowWrapper.current.contains(event.target) && // Click is inside the map
+        (!nodeDetailsPanelRef.current || !nodeDetailsPanelRef.current.contains(event.target)) // Click is not inside the panel
+      ) {
+        console.log("Click on the map background detected, closing the panel.");
+        setShowNodeDetails(false); // Close the panel
+      }
+    };
+  
+    // Add the click event listener to the document
+    document.addEventListener("mousedown", handleClickOnMap);
+  
+    // Cleanup the listener
+    return () => {
+      document.removeEventListener("mousedown", handleClickOnMap);
+    };
+  }, [showNodeDetails]);
+/*useEffect(() => {
+    const handleClickOutsidePanel = (event) => {
+      if (showNodeDetails && nodeDetailsPanelRef.current && !nodeDetailsPanelRef.current.contains(event.target)) {
+        setShowNodeDetails(false);
+      }
+    };
 
+    document.addEventListener("mousedown", handleClickOutsidePanel); // Use mousedown for better UX
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutsidePanel);
+    };
+  }, [showNodeDetails]);*/
 
   const onConnect = useCallback(
     (params) => {
@@ -586,18 +620,6 @@ const renderNode = (node) => {
   );
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
   useEffect(() => {
     const mapRef = doc(db, "maps", mapId);
 
@@ -739,11 +761,6 @@ const renderNode = (node) => {
     }
   };
   
-  
-
-  
-
-  
 
   return (
     <div ref={reactFlowWrapper} style={{ backgroundColor: "#d9fdd3", width: "100%", height: "100vh", position: "relative" }}>
@@ -772,6 +789,7 @@ const renderNode = (node) => {
           onEdgesChange={handleEdgeChanges}
           onContextMenu={onContextMenu}
           onConnect={onConnect}
+          onPaneClick={() => setShowNodeDetails(false)} // Close panel on background click
           onNodeClick={onNodeClick} // Handle node click
           onSelectionChange={handleSelectionChange} // Use the optimized selection handler
           onNodeDoubleClick={onNodeDoubleClick}
@@ -876,10 +894,29 @@ const renderNode = (node) => {
 
 
         
-        <div style={{ zIndex: 1000, position: "absolute", width: "100%", right: "0", top: "0", background: "#f4f4f4", height: "100%", overflowY: "auto", boxShadow: "0 0 10px rgba(0, 0, 0, 0.1)", transition: "transform 0.3s", transform: showNodeDetails ? "translateX(0)" : "translateX(100%)" }}>
-        <button onClick={() => setShowNodeDetails(false)} style={{ position: "absolute", top: "10px", left: "10px" }}>
-          Exit
-        </button>
+        <div
+      style={{
+        zIndex: 1000, // Ensure it's above other elements
+        position: "absolute", // Or "fixed" depending on your layout
+        top: 0,
+        right: 0,
+        width: "100%",
+        padding: "10px",
+        background: "#f4f4f4",
+        height: "100%",
+        overflowY: "auto",
+        boxShadow: "0 0 10px rgba(0, 0, 0, 0.1)",
+        transition: "transform 0.3s",
+        transform: showNodeDetails ? "translateX(0)" : "translateX(100%)", // Conditional transform
+      }}
+      ref={nodeDetailsPanelRef} // The important ref
+    >
+      <button
+        onClick={() => setShowNodeDetails(false)}
+        style={{ position: "absolute", top: "10px", left: "10px" }}
+      >
+        Exit
+      </button>
           {/* Color Picker for Selected Node's Border */}
           {selectedNode && (
             <div style={{ marginTop: "20px", padding: "10px", border: "1px solid #ccc", borderRadius: "8px", backgroundColor: "#fff" }}>
