@@ -854,148 +854,315 @@ const renderNode = (node) => {
         
         
         {/* <button onClick={onDelete} style={{ marginBottom: "10px" }}>Delete Selected</button> */}
-        <div>
-          <button className="home-button" onClick={refreshPage}>
-            Home Page
-          </button>
-        </div>
-        <div>
-          <label style={{ color: "#2C5F2D" }}>Map Name:</label>
-          <input
-            type="text"
-            value={mapName}
-            onChange={(e) => setMapName(e.target.value)}
-            onBlur={() => updateFirebase(nodes, edges)}
-            placeholder="Enter map name"
-            style={{ width: "100%", marginBottom: "10px" }}
-          />
-        </div>
-        <div>
-          <label style={{ color: "#2C5F2D" }}>Map Description:</label>
-          <textarea
-            value={mapDescription}
-            onChange={(e) => setMapDescription(e.target.value)}
-            onBlur={() => updateFirebase(nodes, edges)}
-            placeholder="Enter map description"
-            style={{ width: "100%", height: "100px" }}
-          />
-        </div>
-        <div>
-          <label style={{ color: "#2C5F2D" }}>Map ID:</label>
-          <p>{mapId}</p>
-        </div>
-        <div>
-          <label style={{ color: "#2C5F2D" }}>Last Edited:</label>
-          <p>{lastEdited}</p>
-        </div>
-
-
-
-
-
-        
-        <div
+        {/* Home Button */}
+  <div style={{ marginBottom: "20px", textAlign: "center" }}>
+    <button
+      onClick={refreshPage}
       style={{
-        zIndex: 1000, // Ensure it's above other elements
-        position: "absolute", // Or "fixed" depending on your layout
-        top: 0,
-        right: 0,
+        padding: "10px 20px",
+        backgroundColor: "#4caf50",
+        color: "white",
+        border: "none",
+        borderRadius: "5px",
+        fontSize: "1rem",
+        fontWeight: "bold",
+        cursor: "pointer",
+        boxShadow: "0px 2px 5px rgba(0, 0, 0, 0.1)",
+      }}
+    >
+      Home Page
+    </button>
+  </div>
+
+  {/* Map Name */}
+  <div style={{ marginBottom: "15px" }}>
+    <label style={{ fontWeight: "bold", fontSize: "1rem", color: "#4caf50" }}>
+      Map Name:
+    </label>
+    <input
+      type="text"
+      value={mapName}
+      onChange={(e) => setMapName(e.target.value)}
+      onBlur={() => updateFirebase(nodes, edges)}
+      placeholder="Enter map name"
+      style={{
         width: "100%",
         padding: "10px",
-        background: "#f4f4f4",
-        height: "100%",
-        overflowY: "auto",
-        boxShadow: "0 0 10px rgba(0, 0, 0, 0.1)",
-        transition: "transform 0.3s",
-        transform: showNodeDetails ? "translateX(0)" : "translateX(100%)", // Conditional transform
+        borderRadius: "8px",
+        border: "1px solid #ccc",
+        backgroundColor: "#f9f9f9",
+        fontSize: "1rem",
+        boxShadow: "inset 0 2px 4px rgba(0, 0, 0, 0.1)",
       }}
-      ref={nodeDetailsPanelRef} // The important ref
+    />
+  </div>
+
+  {/* Map Description */}
+  <div style={{ marginBottom: "15px" }}>
+    <label style={{ fontWeight: "bold", fontSize: "1rem", color: "#4caf50" }}>
+      Map Description:
+    </label>
+    <textarea
+      value={mapDescription}
+      onChange={(e) => setMapDescription(e.target.value)}
+      onBlur={() => updateFirebase(nodes, edges)}
+      placeholder="Enter map description"
+      style={{
+        width: "100%",
+        height: "80px",
+        padding: "10px",
+        borderRadius: "8px",
+        border: "1px solid #ccc",
+        backgroundColor: "#f9f9f9",
+        fontSize: "1rem",
+        resize: "none",
+        boxShadow: "inset 0 2px 4px rgba(0, 0, 0, 0.1)",
+      }}
+    />
+  </div>
+
+  {/* Map ID */}
+  <div style={{ marginBottom: "15px" }}>
+    <label style={{ fontWeight: "bold", fontSize: "1rem", color: "#4caf50" }}>
+      Map ID:
+    </label>
+    <div
+      style={{
+        padding: "10px",
+        backgroundColor: "#f9f9f9",
+        borderRadius: "8px",
+        fontSize: "1rem",
+        boxShadow: "inset 0 2px 4px rgba(0, 0, 0, 0.1)",
+      }}
     >
-      <button
-        onClick={() => setShowNodeDetails(false)}
-        style={{ position: "absolute", top: "10px", left: "10px" }}
+      {mapId}
+    </div>
+  </div>
+
+  {/* Last Edited */}
+  <div style={{ marginBottom: "15px" }}>
+    <label style={{ fontWeight: "bold", fontSize: "1rem", color: "#4caf50" }}>
+      Last Edited:
+    </label>
+    <div
+      style={{
+        padding: "10px",
+        backgroundColor: "#f9f9f9",
+        borderRadius: "8px",
+        fontSize: "1rem",
+        boxShadow: "inset 0 2px 4px rgba(0, 0, 0, 0.1)",
+      }}
+    >
+      {lastEdited}
+    </div>
+  </div>
+
+
+
+
+        <div
+style={{
+  zIndex: 1000,
+  position: "absolute",
+  top: 0,
+  right: 0,
+  width: "250px",
+  padding: "20px",
+  background: "white",
+  height: "100%",
+  overflowY: "auto",
+  boxShadow: "0 4px 10px rgba(0, 0, 0, 0.2)",
+  borderRadius: "8px 0 0 8px", // Rounded edges on the left
+  transform: showNodeDetails ? "translateX(0)" : "translateX(100%)",
+  transition: "transform 0.3s ease-in-out",
+  fontFamily: "'Arial', sans-serif",
+}}
+ref={nodeDetailsPanelRef} // Attach the ref to the panel
+>
+{/* Close Button */}
+<button
+  onClick={() => setShowNodeDetails(false)}
+  style={{
+    position: "absolute",
+    top: "10px",
+    left: "10px",
+    background: "#e57373",
+    color: "white",
+    border: "none",
+    borderRadius: "20px",
+    padding: "8px 12px",
+    cursor: "pointer",
+    fontWeight: "bold",
+    fontSize: "0.8rem",
+    boxShadow: "0 2px 5px rgba(0, 0, 0, 0.2)",
+  }}
+>
+  Close
+</button>
+
+{selectedNode && (
+  <div>
+    {/* Header */}
+    <div
+      style={{
+        textAlign: "center",
+        marginBottom: "20px",
+        padding: "15px",
+        backgroundColor: "#4caf50",
+        color: "white",
+        borderRadius: "12px",
+      }}
+    >
+      <h3 style={{ margin: 0, fontSize: "1.5rem", fontWeight: "bold" }}>Node Details</h3>
+      {nodeCreators[selectedNode.creator]?.profilePicture && (
+        <img
+          src={nodeCreators[selectedNode.creator]?.profilePicture}
+          alt="Creator Avatar"
+          style={{
+            width: "60px",
+            height: "60px",
+            borderRadius: "50%",
+            marginTop: "10px",
+            boxShadow: "0 4px 6px rgba(0, 0, 0, 0.2)",
+          }}
+        />
+      )}
+      <p style={{ padding:"10px",  margin: "10px 0 0", fontSize: "1rem", fontWeight: "bold" }}>
+        {nodeCreators[selectedNode.creator]?.username || "Unknown Creator"}
+      </p>
+    </div>
+    {/* Node Name */}
+<div style={{ marginBottom: "20px", marginTop: "30px" }}>
+  <label style={{ fontWeight: "bold", color: "#4caf50", fontSize: "1rem" }}>
+    Node Name:
+  </label>
+  <div
+    style={{
+      padding: "10px",
+      backgroundColor: "#f9f9f9",
+      borderRadius: "8px",
+      fontSize: "1rem",
+      boxShadow: "inset 0 2px 4px rgba(0, 0, 0, 0.1)",
+    }}
+  >
+    {selectedNode.data.label}
+  </div>
+</div>
+    {/* Creator */}
+    <div style={{ marginBottom: "15px" }}>
+      <label style={{ fontWeight: "bold", color: "#4caf50", fontSize: "1rem" }}>Creator:</label>
+      <div
+        style={{
+          padding: "10px",
+          backgroundColor: "#f9f9f9",
+          borderRadius: "8px",
+          fontSize: "1rem",
+          boxShadow: "inset 0 2px 4px rgba(0, 0, 0, 0.1)",
+        }}
       >
-        Exit
-      </button>
-          {/* Color Picker for Selected Node's Border */}
-          {selectedNode && (
-            <div style={{ marginTop: "20px", padding: "10px", border: "1px solid #ccc", borderRadius: "8px", backgroundColor: "#fff" }}>
-              <h4 style={{ marginBottom: "10px", textAlign: "center", color: "#00796b" }}>
-                Node Details
-              </h4>
-              <div style={{ marginBottom: "15px" }}>
-                <label style={{ display: "block", fontWeight: "bold", marginBottom: "5px", color: "#388e3c" }}>
-                  Border Color:
-                </label>
-                <input
-                  type="color"
-                  value={borderColor}
-                  onChange={(e) => handleBorderColorChange(e.target.value)} 
-                  style={{ width: "100%", height: "40px", borderRadius: "5px", border: "1px solid #ccc" }}
-                />
-              </div>
-              <div>
-                <label style={{ display: "block", fontWeight: "bold", marginBottom: "5px", color: "#388e3c" }}>
-                  Notes:
-                </label>
-                <textarea
-                  ref={noteInputRef}
-                  value={nodeNotes[selectedNode.id] || ""}
-                  onChange={handleNoteChange}
-                  onBlur={handleNoteBlur}
-                  placeholder="Add a note for this node"
-                  style={{
-                    width: "80%",
-                    height: "50px",
-                    padding: "10px",
-                    borderRadius: "8px",
-                    border: "1px solid #ccc",
-                    fontSize: "14px",
-                    fontFamily: "'Arial', sans-serif",
-                    backgroundColor: "#f9f9f9",
-                    resize: "none",
-                  }}
-                />
-              </div>
+        {nodeCreators[selectedNode.creator]?.username || "Unknown"}
+      </div>
+    </div>
 
-              {/* Link Input */}
-              <div style={{ marginBottom: "15px" }}>
-                <label style={{ display: "block", fontWeight: "bold", marginBottom: "5px", color: "#388e3c" }}>
-                  Link:
-                </label>
-                <input
-                  type="text"
-                  value={nodeData[selectedNode.id]?.link || ""}
-                  onChange={(e) => handleLinkChange(e.target.value)}
-                  placeholder="Add a link"
-                  style={{
-                    width: "80%",
-                    padding: "10px",
-                    borderRadius: "8px",
-                    border: "1px solid #ccc",
-                  }}
-                />
-              </div>
-              {selectedNode && nodeData[selectedNode.id]?.link && (
-                <div style={{ marginTop: "15px" }}>
-                  <label style={{ fontWeight: "bold", color: "#388e3c" }}>Link:</label>
-                  <a 
-                    href={nodeData[selectedNode.id].link} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    style={{ wordBreak: "break-word" }}
-                  >
-                    {nodeData[selectedNode.id].link}
-                  </a>
-                </div>
-                
-              )}
+    {/* Creation Date */}
+    <div style={{ marginBottom: "15px" }}>
+      <label style={{ fontWeight: "bold", color: "#4caf50", fontSize: "1rem" }}>Creation Date:</label>
+      <div
+        style={{
+          padding: "10px",
+          backgroundColor: "#f9f9f9",
+          borderRadius: "8px",
+          fontSize: "1rem",
+          boxShadow: "inset 0 2px 4px rgba(0, 0, 0, 0.1)",
+        }}
+      >
+        {new Date(selectedNode.creationTimestamp).toLocaleString()}
+      </div>
+    </div>
 
+    {/* Border Color Picker */}
+    <div style={{ marginBottom: "15px" }}>
+      <label style={{ fontWeight: "bold", color: "#4caf50", fontSize: "1rem" }}>Border Color:</label>
+      <input
+        type="color"
+        value={borderColor}
+        onChange={(e) => handleBorderColorChange(e.target.value)}
+        style={{
+          width: "100%",
+          height: "40px",
+          border: "none",
+          borderRadius: "8px",
+          cursor: "pointer",
+          boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+        }}
+      />
+    </div>
 
+    {/* Notes */}
+    <div style={{ marginBottom: "15px" }}>
+      <label style={{ fontWeight: "bold", color: "#4caf50", fontSize: "1rem" }}>Notes:</label>
+      <textarea
+        ref={noteInputRef}
+        value={nodeNotes[selectedNode.id] || ""}
+        onChange={handleNoteChange}
+        onBlur={handleNoteBlur}
+        placeholder="Add a note for this node"
+        style={{
+          width: "100%",
+          height: "60px",
+          padding: "10px",
+          borderRadius: "8px",
+          border: "1px solid #ccc",
+          backgroundColor: "#f9f9f9",
+          resize: "none",
+          fontSize: "1rem",
+        }}
+      />
+    </div>
 
-            </div>
-          )}
-          </div>
+    {/* Link */}
+    <div style={{ marginBottom: "15px" }}>
+      <label style={{ fontWeight: "bold", color: "#4caf50", fontSize: "1rem" }}>Link:</label>
+      <input
+        type="text"
+        value={nodeData[selectedNode.id]?.link || ""}
+        onChange={(e) => handleLinkChange(e.target.value)}
+        placeholder="Add a link"
+        style={{
+          width: "100%",
+          padding: "10px",
+          borderRadius: "8px",
+          border: "1px solid #ccc",
+          backgroundColor: "#f9f9f9",
+        }}
+      />
+    </div>
+
+    {/* Link Display */}
+    {nodeData[selectedNode.id]?.link && (
+      <div style={{ marginTop: "15px" }}>
+        <label style={{ fontWeight: "bold", color: "#4caf50", fontSize: "1rem" }}>View Link:</label>
+        <a
+          href={nodeData[selectedNode.id].link}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: "block",
+            marginTop: "10px",
+            color: "#4caf50",
+            textDecoration: "underline",
+            wordBreak: "break-word",
+            fontSize: "1rem",
+          }}
+        >
+          {nodeData[selectedNode.id].link}
+        </a>
+      </div>
+    )}
+  </div>
+)}
+</div>
+
 
         <ParticipantBox mapId={mapId} currentUserId={currentUserId} />
 
