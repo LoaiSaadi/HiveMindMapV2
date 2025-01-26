@@ -92,7 +92,14 @@ const initialNodes = [
   },
 ];
 
-const initialEdges = [];
+const initialEdges = [
+  {
+    id: "e1-2",
+    source: "1",
+    target: "2",
+    label: "Default Edge",
+  },
+];
 
 const MapEditor = ({ mapId }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -119,7 +126,10 @@ const MapEditor = ({ mapId }) => {
   const [nodeCreators, setNodeCreators] = useState({})
   const nodeDetailsPanelRef = useRef(null); 
   const [showNodeDetails, setShowNodeDetails] = useState(false);
-
+  const [selectedEdge, setSelectedEdge] = useState(null);
+  const [showEdgeDetails, setShowEdgeDetails] = useState(false);
+  const edgeDetailsPanelRef = useRef(null);
+  
 
   // Refs to track previous state
   const prevNodesRef = useRef(nodes);
@@ -134,37 +144,44 @@ const MapEditor = ({ mapId }) => {
       window.location.reload();
     };
 
-  const updateFirebase = useCallback(
-    (newNodes, newEdges) => {
-      if (!firebaseInitialized) return; // Avoid updating Firebase before initialization
-      console.log("Updating Firebase with nodes:", newNodes);
-      console.log("Edges:", newEdges);
-      // Only update if nodes or edges have actually changed
-      if (JSON.stringify(newNodes) !== JSON.stringify(prevNodesRef.current) || 
+    const updateFirebase = useCallback(
+      (newNodes, newEdges) => {
+        if (!firebaseInitialized) return; // Avoid updating Firebase before initialization
+        console.log("Updating Firebase with nodes:", newNodes);
+        console.log("Edges:", newEdges);
+    
+        // Only update if nodes, edges, or other relevant data have actually changed
+        if (
+          JSON.stringify(newNodes) !== JSON.stringify(prevNodesRef.current) ||
           JSON.stringify(newEdges) !== JSON.stringify(prevEdgesRef.current) ||
-          JSON.stringify(nodeNotes) !== JSON.stringify(prevNodeNotesRef.current ||
+          JSON.stringify(nodeNotes) !== JSON.stringify(prevNodeNotesRef.current) ||
           JSON.stringify(nodeData) !== JSON.stringify(prevNodeDataRef.current)
-          )) {
-        const mapRef = doc(db, "maps", mapId);
-        updateDoc(mapRef, {
-          nodes: newNodes,
-          edges: newEdges,
-          name: mapName,
-          description: mapDescription,
-          lastEdited: new Date(),
-          nodeNotes: nodeNotes,
-          nodeData: nodeData,
-        }).catch((err) => console.error("Firebase update failed:", err));
-        
-        // Update refs to current values
-        prevNodesRef.current = newNodes;
-        prevEdgesRef.current = newEdges;
-        prevNodeNotesRef.current = nodeNotes;
-        prevNodeDataRef.current = nodeData;
-      }
-    },
-    [firebaseInitialized, mapId, mapName, mapDescription,nodeNotes,nodeData]
-  );
+        ) {
+          const mapRef = doc(db, "maps", mapId);
+    
+          updateDoc(mapRef, {
+            nodes: newNodes,
+            edges: newEdges.map((edge) => ({
+              ...edge,
+              style: edge.style || {}, // Ensure edge style is included
+            })),
+            name: mapName,
+            description: mapDescription,
+            lastEdited: new Date(),
+            nodeNotes: nodeNotes,
+            nodeData: nodeData,
+          }).catch((err) => console.error("Firebase update failed:", err));
+    
+          // Update refs to current values
+          prevNodesRef.current = newNodes;
+          prevEdgesRef.current = newEdges;
+          prevNodeNotesRef.current = nodeNotes;
+          prevNodeDataRef.current = nodeData;
+        }
+      },
+      [firebaseInitialized, mapId, mapName, mapDescription, nodeNotes, nodeData]
+    );
+    
   const updateCursor = useCallback(
     async (x, y) => {
       try {
@@ -182,184 +199,156 @@ const MapEditor = ({ mapId }) => {
     },
     [mapId, currentUserId]
   );
-  // const onConnect = useCallback(
-  //   (params) => {
-  //     setEdges((eds) => {
-  //       const updatedEdges = addEdge(params, eds);
-  //       updateFirebase(nodes, updatedEdges); // update Firebase only when there's a real change
-  //       return updatedEdges;
-  //     });
-  //     socket.emit("edge-added", params);
-  //   },
-  //   [nodes, updateFirebase]
-  // );
+  const onEdgeClick = useCallback((event, edge) => {
+  //event.stopPropagation();
+  setSelectedEdge(edge); // Set the clicked edge as selected
+  setShowEdgeDetails(true); // Show the edge details panel
+}, []);
 
-  // const onConnect = useCallback(
-  //   (params) => {
-  //     // Show a prompt or modal to the user to select the edge style
-  //     const edgeStyle = window.prompt(
-  //       "Choose edge style: 'arrow', 'no-arrow', or 'dashed'"
-  //     );
-  
-  //     // Define the edge style based on the user's choice
-  //     let edgeOptions = {};
-  //     switch (edgeStyle) {
-  //       case "arrow":
-  //         edgeOptions = { markerEnd: { type: "arrowclosed" } };
-  //         break;
-  //       case "dashed":
-  //         edgeOptions = { style: { strokeDasharray: "5,5" } };
-  //         break;
-  //       case "no-arrow":
-  //       default:
-  //         edgeOptions = {}; // Default solid line without arrow
-  //         break;
-  //     }
-  
-  //     // Add the new edge with the chosen style
-  //     setEdges((eds) => {
-  //       const updatedEdges = addEdge({ ...params, ...edgeOptions }, eds);
-  //       updateFirebase(nodes, updatedEdges); // Update Firebase
-  //       return updatedEdges;
-  //     });
-  
-  //     // Emit the event to other clients
-  //     socket.emit("edge-added", { ...params, ...edgeOptions });
-  //   },
-  //   [nodes, updateFirebase]
-  // );
-  useEffect(() => {
-    const handleClickOnMap = (event) => {
-      // Check if the click is within the map background
-      if (
-        showNodeDetails &&
-        reactFlowWrapper.current && // Ensure the ref is set
-        reactFlowWrapper.current.contains(event.target) && // Click is inside the map
-        (!nodeDetailsPanelRef.current || !nodeDetailsPanelRef.current.contains(event.target)) // Click is not inside the panel
-      ) {
-        console.log("Click on the map background detected, closing the panel.");
-        setShowNodeDetails(false); // Close the panel
-      }
-    };
-  
-    // Add the click event listener to the document
-    document.addEventListener("mousedown", handleClickOnMap);
-  
-    // Cleanup the listener
-    return () => {
-      document.removeEventListener("mousedown", handleClickOnMap);
-    };
-  }, [showNodeDetails]);
-/*useEffect(() => {
-    const handleClickOutsidePanel = (event) => {
-      if (showNodeDetails && nodeDetailsPanelRef.current && !nodeDetailsPanelRef.current.contains(event.target)) {
-        setShowNodeDetails(false);
-      }
-    };
 
-    document.addEventListener("mousedown", handleClickOutsidePanel); // Use mousedown for better UX
+useEffect(() => {
+  const handleClickOutsideNodePanel = (event) => {
+    if (
+      reactFlowWrapper.current &&
+      reactFlowWrapper.current.contains(event.target) &&
+      (!nodeDetailsPanelRef.current || !nodeDetailsPanelRef.current.contains(event.target))
+    ) {
+      setShowNodeDetails(false); // Close the node panel
+    }
+  };
 
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutsidePanel);
-    };
-  }, [showNodeDetails]);*/
+  document.addEventListener("mousedown", handleClickOutsideNodePanel);
 
-  const onConnect = useCallback(
-    (params) => {
-      // Create the modal container
-      const modal = document.createElement("div");
-      modal.style.position = "fixed";
-      modal.style.top = "50%";
-      modal.style.left = "50%";
-      modal.style.transform = "translate(-50%, -50%)";
-      modal.style.backgroundColor = "white";
-      modal.style.padding = "20px";
-      modal.style.border = "1px solid #ccc";
-      modal.style.boxShadow = "0px 4px 6px rgba(0, 0, 0, 0.1)";
-      modal.style.zIndex = "1000";
-      modal.style.textAlign = "center";
-  
-      // Create a title for the modal
-      const title = document.createElement("h3");
-      title.innerText = "Choose Edge Style";
-      modal.appendChild(title);
-  
-      // Helper function to create buttons
-      const createButton = (label, svgContent, styleCallback) => {
-        const button = document.createElement("button");
-        button.style.margin = "10px";
-        button.style.padding = "10px";
-        button.style.border = "1px solid #ddd";
-        button.style.backgroundColor = "#f9f9f9";
-        button.style.cursor = "pointer";
-        button.innerHTML = svgContent;
-        button.onclick = () => {
-          styleCallback();
-          document.body.removeChild(modal); // Close modal
-        };
-        modal.appendChild(button);
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutsideNodePanel);
+  };
+}, []);
+
+useEffect(() => {
+  const handleClickOutsideEdgePanel = (event) => {
+    if (
+      reactFlowWrapper.current &&
+      reactFlowWrapper.current.contains(event.target) &&
+      (!edgeDetailsPanelRef.current || !edgeDetailsPanelRef.current.contains(event.target))
+    ) {
+      setShowEdgeDetails(false); // Close the edge panel
+    }
+  };
+
+  document.addEventListener("mousedown", handleClickOutsideEdgePanel);
+
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutsideEdgePanel);
+  };
+}, []);
+
+
+
+const onConnect = useCallback(
+  (params) => {
+    // Create the modal container
+    const modal = document.createElement("div");
+    modal.style.position = "fixed";
+    modal.style.top = "50%";
+    modal.style.left = "50%";
+    modal.style.transform = "translate(-50%, -50%)";
+    modal.style.backgroundColor = "white";
+    modal.style.padding = "20px";
+    modal.style.border = "1px solid #ccc";
+    modal.style.boxShadow = "0px 4px 6px rgba(0, 0, 0, 0.1)";
+    modal.style.zIndex = "1000";
+    modal.style.textAlign = "center";
+
+    // Create a title for the modal
+    const title = document.createElement("h3");
+    title.innerText = "Choose Edge Style";
+    modal.appendChild(title);
+
+    // Helper function to create buttons
+    const createButton = (label, svgContent, styleCallback) => {
+      const button = document.createElement("button");
+      button.style.margin = "10px";
+      button.style.padding = "10px";
+      button.style.border = "1px solid #ddd";
+      button.style.backgroundColor = "#f9f9f9";
+      button.style.cursor = "pointer";
+      button.innerHTML = svgContent;
+      button.onclick = () => {
+        styleCallback();
+        document.body.removeChild(modal); // Close modal
       };
-  
-      // Add arrow button
-      createButton(
-        "Arrow",
-        `<svg height="30" width="80">
-           <line x1="0" y1="15" x2="60" y2="15" stroke="black" stroke-width="2" />
-           <polygon points="60,10 70,15 60,20" fill="black" />
-         </svg>`,
-        () => {
-          setEdges((eds) => {
-            const updatedEdges = addEdge(
-              { ...params, markerEnd: { type: "arrowclosed" } },
-              eds
-            );
-            updateFirebase(nodes, updatedEdges);
-            return updatedEdges;
-          });
-          socket.emit("edge-added", { ...params, markerEnd: { type: "arrowclosed" } });
-        }
-      );
-  
-      // Add dashed button
-      createButton(
-        "Dashed",
-        `<svg height="30" width="80">
-           <line x1="0" y1="15" x2="70" y2="15" stroke="black" stroke-width="2" stroke-dasharray="5,5" />
-         </svg>`,
-        () => {
-          setEdges((eds) => {
-            const updatedEdges = addEdge(
-              { ...params, style: { strokeDasharray: "5,5" } },
-              eds
-            );
-            updateFirebase(nodes, updatedEdges);
-            return updatedEdges;
-          });
-          socket.emit("edge-added", { ...params, style: { strokeDasharray: "5,5" } });
-        }
-      );
-  
-      // Add no-arrow button
-      createButton(
-        "No Arrow",
-        `<svg height="30" width="80">
-           <line x1="0" y1="15" x2="70" y2="15" stroke="black" stroke-width="2" />
-         </svg>`,
-        () => {
-          setEdges((eds) => {
-            const updatedEdges = addEdge({ ...params }, eds);
-            updateFirebase(nodes, updatedEdges);
-            return updatedEdges;
-          });
-          socket.emit("edge-added", { ...params });
-        }
-      );
-  
-      // Add the modal to the document
-      document.body.appendChild(modal);
-    },
-    [nodes, updateFirebase]
-  );
+      modal.appendChild(button);
+    };
+
+    // Add arrow button
+    createButton(
+      "Arrow",
+      `<svg height="30" width="80">
+         <line x1="0" y1="15" x2="60" y2="15" stroke="black" stroke-width="2" />
+         <polygon points="60,10 70,15 60,20" fill="black" />
+       </svg>`,
+      () => {
+        setEdges((eds) => {
+          const updatedEdges = addEdge(
+            { ...params, markerEnd: { type: "arrowclosed" } },
+            eds
+          );
+          updateFirebase(nodes, updatedEdges);
+          return updatedEdges;
+        });
+        socket.emit("edge-added", { ...params, markerEnd: { type: "arrowclosed" } });
+      }
+    );
+
+    // Add dashed button
+    createButton(
+      "Dashed",
+      `<svg height="30" width="80">
+         <line x1="0" y1="15" x2="70" y2="15" stroke="black" stroke-width="2" stroke-dasharray="5,5" />
+       </svg>`,
+      () => {
+        setEdges((eds) => {
+          const updatedEdges = addEdge(
+            { ...params, style: { strokeDasharray: "5,5" } },
+            eds
+          );
+          updateFirebase(nodes, updatedEdges);
+          return updatedEdges;
+        });
+        socket.emit("edge-added", { ...params, style: { strokeDasharray: "5,5" } });
+      }
+    );
+
+    // Add no-arrow button
+    createButton(
+      "No Arrow",
+      `<svg height="30" width="80">
+         <line x1="0" y1="15" x2="70" y2="15" stroke="black" stroke-width="2" />
+       </svg>`,
+      () => {
+        const defaultEdgeStyle = { stroke: "#000000" }; // Default edge style
+        setEdges((eds) => {
+          const updatedEdges = addEdge(
+            {
+              ...params,
+              style: defaultEdgeStyle,
+            },
+            eds
+          );
+          updateFirebase(nodes, updatedEdges);
+          return updatedEdges;
+        });
+        socket.emit("edge-added", { ...params });
+      }
+    );
+
+    // Add the modal to the document
+    document.body.appendChild(modal);
+  },
+  [nodes, updateFirebase]
+);
+
+
   
   
   
@@ -789,13 +778,286 @@ const renderNode = (node) => {
           onEdgesChange={handleEdgeChanges}
           onContextMenu={onContextMenu}
           onConnect={onConnect}
-          onPaneClick={() => setShowNodeDetails(false)} // Close panel on background click
+          onPaneClick={() => {
+            setShowNodeDetails(false);
+            setShowEdgeDetails(false);
+          }}// Close panel on background click
           onNodeClick={onNodeClick} // Handle node click
+          onEdgeClick={onEdgeClick}
           onSelectionChange={handleSelectionChange} // Use the optimized selection handler
           onNodeDoubleClick={onNodeDoubleClick}
           selectNodesOnDrag
           fitView
         />
+{showEdgeDetails && selectedEdge && (
+  <div
+    ref={edgeDetailsPanelRef}
+    style={{
+      zIndex: 2000,
+      position: "absolute",
+      top: 0,
+      right: 0,
+      width: "300px",
+      padding: "20px",
+      background: "white",
+      height: "100%",
+      overflowY: "auto",
+      boxShadow: "0 4px 10px rgba(0, 0, 0, 0.2)",
+      borderRadius: "8px 0 0 8px",
+      transform: showEdgeDetails ? "translateX(0)" : "translateX(100%)",
+      transition: "transform 0.3s ease-in-out",
+      fontFamily: "'Arial', sans-serif",
+    }}
+  >
+    {/* Close Button */}
+    <button
+      onClick={() => setShowEdgeDetails(false)}
+      style={{
+        position: "absolute",
+        top: "10px",
+        left: "10px",
+        background: "#e57373",
+        color: "white",
+        border: "none",
+        borderRadius: "20px",
+        padding: "8px 12px",
+        cursor: "pointer",
+        fontWeight: "bold",
+        fontSize: "0.8rem",
+        boxShadow: "0 2px 5px rgba(0, 0, 0, 0.2)",
+      }}
+    >
+      Close
+    </button>
+
+    {selectedEdge && (
+      <div>
+        {/* Header */}
+        <div style={{ marginBottom: "10px", marginTop: "30px" }}>
+          <h3 style={{ margin: 0, fontSize: "1.5rem", fontWeight: "bold" }}>
+            Edge Details
+          </h3>
+        </div>
+
+        {/* Label */}
+        <div style={{ marginBottom: "20px" }}>
+          <label
+            style={{ fontWeight: "bold", color: "#4caf50", fontSize: "1rem" }}
+          >
+            Label:
+          </label>
+          <input
+            type="text"
+            value={selectedEdge.label || ""}
+            onChange={(e) => {
+              const updatedEdges = edges.map((edge) =>
+                edge.id === selectedEdge.id
+                  ? { ...edge, label: e.target.value }
+                  : edge
+              );
+              setEdges(updatedEdges);
+              setSelectedEdge({ ...selectedEdge, label: e.target.value });
+            }}
+            style={{
+              width: "100%",
+              padding: "10px",
+              borderRadius: "8px",
+              border: "1px solid #ccc",
+              backgroundColor: "#f9f9f9",
+              fontSize: "1rem",
+              boxShadow: "inset 0 2px 4px rgba(0, 0, 0, 0.1)",
+            }}
+          />
+        </div>
+
+        {/* Color */}
+        <div style={{ marginBottom: "20px" }}>
+          <label
+            style={{ fontWeight: "bold", color: "#4caf50", fontSize: "1rem" }}
+          >
+            Color:
+          </label>
+          <input
+            type="color"
+            value={selectedEdge.style?.stroke || "#000000"}
+            onChange={(e) => {
+              const updatedEdges = edges.map((edge) =>
+                edge.id === selectedEdge.id
+                  ? {
+                      ...edge,
+                      style: { ...edge.style, stroke: e.target.value },
+                    }
+                  : edge
+              );
+              setEdges(updatedEdges);
+              setSelectedEdge({
+                ...selectedEdge,
+                style: { ...selectedEdge.style, stroke: e.target.value },
+              });
+            }}
+            style={{
+              width: "100%",
+              height: "40px",
+              borderRadius: "8px",
+              border: "none",
+              cursor: "pointer",
+              boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+            }}
+          />
+        </div>
+
+        {/* Type */}
+        <div style={{ marginBottom: "20px" }}>
+          <label
+            style={{ fontWeight: "bold", color: "#4caf50", fontSize: "1rem" }}
+          >
+            Type:
+          </label>
+          <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+            {/* Solid Line */}
+            <button
+              onClick={() => {
+                const updatedEdges = edges.map((edge) =>
+                  edge.id === selectedEdge.id
+                    ? { ...edge, style: { ...edge.style, strokeDasharray: undefined } }
+                    : edge
+                );
+                setEdges(updatedEdges);
+                setSelectedEdge({
+                  ...selectedEdge,
+                  style: { ...selectedEdge.style, strokeDasharray: undefined },
+                });
+              }}
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "5px",
+                borderRadius: "8px",
+                border: "1px solid #ddd",
+                cursor: "pointer",
+                backgroundColor: selectedEdge.style?.strokeDasharray
+                  ? "#fff"
+                  : "#4caf50",
+                color: selectedEdge.style?.strokeDasharray ? "#333" : "#fff",
+              }}
+            >
+              Solid
+              <svg height="10" width="50">
+                <line
+                  x1="0"
+                  y1="5"
+                  x2="50"
+                  y2="5"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                />
+              </svg>
+            </button>
+
+            {/* Dashed Line */}
+            <button
+              onClick={() => {
+                const updatedEdges = edges.map((edge) =>
+                  edge.id === selectedEdge.id
+                    ? { ...edge, style: { ...edge.style, strokeDasharray: "5,5" } }
+                    : edge
+                );
+                setEdges(updatedEdges);
+                setSelectedEdge({
+                  ...selectedEdge,
+                  style: { ...selectedEdge.style, strokeDasharray: "5,5" },
+                });
+              }}
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "5px",
+                borderRadius: "8px",
+                border: "1px solid #ddd",
+                cursor: "pointer",
+                backgroundColor:
+                  selectedEdge.style?.strokeDasharray === "5,5"
+                    ? "#4caf50"
+                    : "#fff",
+                color: selectedEdge.style?.strokeDasharray === "5,5" ? "#fff" : "#333",
+              }}
+            >
+              Dashed
+              <svg height="10" width="50">
+                <line
+                  x1="0"
+                  y1="5"
+                  x2="50"
+                  y2="5"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeDasharray="5,5"
+                />
+              </svg>
+            </button>
+
+            {/* Arrow Line */}
+            <button
+              onClick={() => {
+                const updatedEdges = edges.map((edge) =>
+                  edge.id === selectedEdge.id
+                    ? {
+                        ...edge,
+                        markerEnd: { type: "arrowclosed" },
+                        style: { ...edge.style, strokeDasharray: undefined },
+                      }
+                    : edge
+                );
+                setEdges(updatedEdges);
+                setSelectedEdge({
+                  ...selectedEdge,
+                  markerEnd: { type: "arrowclosed" },
+                  style: { ...selectedEdge.style, strokeDasharray: undefined },
+                });
+              }}
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "5px",
+                borderRadius: "8px",
+                border: "1px solid #ddd",
+                cursor: "pointer",
+                backgroundColor: selectedEdge.markerEnd?.type ? "#4caf50" : "#fff",
+                color: selectedEdge.markerEnd?.type ? "#fff" : "#333",
+              }}
+            >
+              Arrow
+              <svg height="10" width="50">
+                <line
+                  x1="0"
+                  y1="5"
+                  x2="40"
+                  y2="5"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                />
+                <polygon
+                  points="40,0 50,5 40,10"
+                  fill="currentColor"
+                  stroke="currentColor"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+)}
+
+
+  
 {Object.entries(cursors).map(([id, cursor]) => (
   <div
     key={id}
@@ -849,13 +1111,12 @@ const renderNode = (node) => {
       )}
       </div>
 
-      <div style={{zIndex:1000, position:"absolute" ,  width: "20%", padding: "10px",right: "0",top:"0", background: "#f4f4f4",height: "100%",overflowY: "auto",boxShadow: "0 0 10px rgba(0, 0, 0, 0.1)", }}>
-        <h3 style={{ color: "#2C5F2D" }}>Map Details</h3>
-        
+    <div style={{zIndex:1000, width: "250px", position:"absolute" ,  width: "20%", padding: "10px",right: "0",top:"0", background: "#f4f4f4",height: "100%",overflowY: "auto",boxShadow: "0 0 10px rgba(0, 0, 0, 0.1)", }}>
+        <h3 style={{ color: "#2C5F2D" }}>Learning Space Details</h3>
         
         {/* <button onClick={onDelete} style={{ marginBottom: "10px" }}>Delete Selected</button> */}
         {/* Home Button */}
-  <div style={{ marginBottom: "20px", textAlign: "center" }}>
+  <div style={{ marginBottom: "10px", textAlign: "center" }}>
     <button
       onClick={refreshPage}
       style={{
@@ -873,18 +1134,20 @@ const renderNode = (node) => {
       Home Page
     </button>
   </div>
+  
+        
 
   {/* Map Name */}
   <div style={{ marginBottom: "15px" }}>
     <label style={{ fontWeight: "bold", fontSize: "1rem", color: "#4caf50" }}>
-      Map Name:
+    Learning Space Name:
     </label>
     <input
       type="text"
       value={mapName}
       onChange={(e) => setMapName(e.target.value)}
       onBlur={() => updateFirebase(nodes, edges)}
-      placeholder="Enter map name"
+      placeholder="Enter Learning Space name"
       style={{
         width: "100%",
         padding: "10px",
@@ -900,13 +1163,13 @@ const renderNode = (node) => {
   {/* Map Description */}
   <div style={{ marginBottom: "15px" }}>
     <label style={{ fontWeight: "bold", fontSize: "1rem", color: "#4caf50" }}>
-      Map Description:
+    Learning Space Description:
     </label>
     <textarea
       value={mapDescription}
       onChange={(e) => setMapDescription(e.target.value)}
       onBlur={() => updateFirebase(nodes, edges)}
-      placeholder="Enter map description"
+      placeholder="Enter Learning Space description"
       style={{
         width: "100%",
         height: "80px",
@@ -924,7 +1187,7 @@ const renderNode = (node) => {
   {/* Map ID */}
   <div style={{ marginBottom: "15px" }}>
     <label style={{ fontWeight: "bold", fontSize: "1rem", color: "#4caf50" }}>
-      Map ID:
+    Learning Space ID:
     </label>
     <div
       style={{
@@ -956,12 +1219,8 @@ const renderNode = (node) => {
       {lastEdited}
     </div>
   </div>
-
-
-
-
         <div
-style={{
+style={{//style for the node details panel
   zIndex: 1000,
   position: "absolute",
   top: 0,
