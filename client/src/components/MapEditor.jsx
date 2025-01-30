@@ -98,6 +98,8 @@ const initialEdges = [
     source: "1",
     target: "2",
     label: "Default Edge",
+    style: { stroke: "#000000" }, // Default style
+    markerEnd: null, // Default no marker
   },
 ];
 
@@ -129,7 +131,7 @@ const MapEditor = ({ mapId }) => {
   const [selectedEdge, setSelectedEdge] = useState(null);
   const [showEdgeDetails, setShowEdgeDetails] = useState(false);
   const edgeDetailsPanelRef = useRef(null);
-  
+  const [edgeLabel, setEdgeLabel] = useState(""); 
 
   // Refs to track previous state
   const prevNodesRef = useRef(nodes);
@@ -143,45 +145,77 @@ const MapEditor = ({ mapId }) => {
     const refreshPage = () => {
       window.location.reload();
     };
-
     const updateFirebase = useCallback(
       (newNodes, newEdges) => {
         if (!firebaseInitialized) return; // Avoid updating Firebase before initialization
-        console.log("Updating Firebase with nodes:", newNodes);
-        console.log("Edges:", newEdges);
+        console.log("🔥 Attempting to update Firebase...");
+        
+        console.log("Nodes before filtering:", newNodes);
+        console.log("Edges before filtering:", newEdges);
+        console.log("Node Notes:", nodeNotes);
+        console.log("Node Data:", nodeData);
+        console.log("Map Name:", mapName);
+        console.log("Map Description:", mapDescription);
     
-        // Only update if nodes, edges, or other relevant data have actually changed
-        if (
-          JSON.stringify(newNodes) !== JSON.stringify(prevNodesRef.current) ||
-          JSON.stringify(newEdges) !== JSON.stringify(prevEdgesRef.current) ||
-          JSON.stringify(nodeNotes) !== JSON.stringify(prevNodeNotesRef.current) ||
-          JSON.stringify(nodeData) !== JSON.stringify(prevNodeDataRef.current)
-        ) {
+        try {
           const mapRef = doc(db, "maps", mapId);
     
-          updateDoc(mapRef, {
-            nodes: newNodes,
-            edges: newEdges.map((edge) => ({
-              ...edge,
-              style: edge.style || {}, // Ensure edge style is included
-            })),
-            name: mapName,
-            description: mapDescription,
+          // Helper function to remove undefined values
+          const removeUndefined = (obj) => {
+            if (!obj || typeof obj !== "object") return obj;
+            return Object.fromEntries(
+              Object.entries(obj).filter(([_, value]) => value !== undefined)
+            );
+          };
+    
+          // Ensure every node and edge is valid
+          const filteredNodes = newNodes.map(node => removeUndefined(node));
+          const filteredEdges = newEdges.map(edge => removeUndefined({
+            ...edge,
+            style: edge.style || {}, // Ensure edge style is included
+          }));
+    
+          console.log("✅ Filtered Nodes:", filteredNodes);
+          console.log("✅ Filtered Edges:", filteredEdges);
+    
+          const updateData = removeUndefined({
+            nodes: filteredNodes,
+            edges: filteredEdges,
+            name: mapName || "Untitled",
+            description: mapDescription || "",
             lastEdited: new Date(),
-            nodeNotes: nodeNotes,
-            nodeData: nodeData,
-          }).catch((err) => console.error("Firebase update failed:", err));
+            nodeNotes: removeUndefined(nodeNotes),
+            nodeData: removeUndefined(nodeData),
+          });
+    
+          console.log("🔥 Final Data Sent to Firebase:", updateData);
+    
+          updateDoc(mapRef, updateData)
+            .then(() => {
+              console.log("✅ Firebase update successful!");
+            })
+            .catch((err) => console.error("❌ Firebase update failed:", err));
     
           // Update refs to current values
           prevNodesRef.current = newNodes;
           prevEdgesRef.current = newEdges;
           prevNodeNotesRef.current = nodeNotes;
           prevNodeDataRef.current = nodeData;
+    
+        } catch (error) {
+          console.error("❌ Unexpected error in updateFirebase:", error);
         }
       },
       [firebaseInitialized, mapId, mapName, mapDescription, nodeNotes, nodeData]
     );
     
+    const onEdgeDoubleClick = useCallback((event, edge) => {
+      event.preventDefault();
+      setSelectedEdge(edge); 
+      setEdgeLabel(edge.label || ""); // Set initial value
+    }, []);
+
+  
   const updateCursor = useCallback(
     async (x, y) => {
       try {
@@ -486,6 +520,22 @@ const onConnect = useCallback(
       )
     );
   };
+  const handleedgeLabelChange = (event) => {
+    setEdgeLabel(event.target.value);
+  };
+  // Save label when input loses focus or "Enter" is pressed
+  const saveEdgeLabel = () => {
+    if (selectedEdge) {
+      setEdges((eds) =>
+        eds.map((edge) =>
+          edge.id === selectedEdge.id ? { ...edge, label: edgeLabel } : edge
+        )
+      );
+      setSelectedEdge(null); // Exit edit mode
+    }
+  };
+
+
   
   const handleLabelBlur = (nodeId) => {
     setNodes((nds) =>
@@ -699,13 +749,21 @@ const renderNode = (node) => {
   }, [mapId]);
 
 
+
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (disableShortcuts) return;
   
+      const activeElement = document.activeElement;
+      
+      // Prevent shortcuts when typing in an input field, textarea, or contenteditable elements
+      if (activeElement.tagName === "INPUT" || activeElement.tagName === "TEXTAREA" || activeElement.isContentEditable) {
+        return;
+      }
+  
       if (event.key === "Delete" || event.key === "Backspace") {
         onDelete();
-      } else if (event.key === "n" || event.key === "N") {
+      } else if (event.key.toLowerCase() === "n") {
         addNode();
       }
     };
@@ -713,7 +771,7 @@ const renderNode = (node) => {
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onDelete, addNode, disableShortcuts]);
-
+  
 
   // Handle node click to select it
   const onNodeClick = useCallback((event, node) => {
@@ -786,11 +844,13 @@ const renderNode = (node) => {
           onEdgeClick={onEdgeClick}
           onSelectionChange={handleSelectionChange} // Use the optimized selection handler
           onNodeDoubleClick={onNodeDoubleClick}
+          onEdgeDoubleClick={onEdgeDoubleClick}
           selectNodesOnDrag
           fitView
         />
 {showEdgeDetails && selectedEdge && (
   <div
+
     ref={edgeDetailsPanelRef}
     style={{
       zIndex: 2000,
