@@ -22,10 +22,24 @@
     gap: 15px;
     flex-grow: 1; /* Allow left side to take up available space */
 }
-.user-text{
+
+.user-text {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
+}
+
+.user-text h2 {
+    font-size: 1.5rem;
+    color: #2C5F2D;
+    margin: 0;
+    font-weight: 600;
+}
+
+.user-text p {
+    font-size: 0.9rem;
+    color: #666;
+    margin: 0;
 }
 .header-right {
     display: flex;
@@ -39,12 +53,18 @@
 }
 
 .profile-picture {
-    width: 60px;
-    height: 60px;
+    width: 80px;
+    height: 80px;
     border-radius: 50%;
     object-fit: cover;
-    border: 2px solid #4caf50;
-    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+    border: 3px solid #4CAF50;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.profile-picture:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
 }
 /* Buttons */
 .action-button {
@@ -112,15 +132,42 @@
   }
   
   .modal-content {
-    border: 2px solid #4CAF50; /* Green border */
-    background-color: white;
-    padding: 20px;
-    border-radius: 10px;
-    width: 400px;
-    text-align: center;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-    text-align: center;
+    background-color: #fff;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    max-width: 400px;
+    width: 90%;
+    animation: slideIn 0.3s ease;
+    border: none; /* Remove the green border for a cleaner look */
   }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.modal-header h2 {
+    font-size: 1.5rem;
+    color: #2C5F2D;
+    margin: 0;
+    font-weight: 600;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+    transition: color 0.3s ease;
+}
+
+.close-button:hover {
+    color: #2C5F2D;
+}
+
   
   .close-button {
     background: #ff1500;
@@ -140,6 +187,13 @@
     margin-bottom: 15px;
     text-align: left;
 }
+.form-group label {
+    font-size: 0.9rem;
+    color: #555;
+    margin-bottom: 0.5rem;
+    display: block;
+    font-weight: 500;
+}
 
 .form-input {
     width: 100%;
@@ -149,7 +203,43 @@
     border-radius: 5px;
     transition: border 0.3s;
 }
+.form-input:focus {
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+    outline: none;
+}
 
+/* File Input Styling */
+.form-group input[type="file"] {
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    background-color: #f9f9f9;
+    cursor: pointer;
+}
+
+.form-group input[type="file"]:hover {
+    background-color: #f0f0f0;
+}
+
+/* Save Changes Button */
+.action-button {
+    background: linear-gradient(135deg, #4CAF50, #2C5F2D);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    width: 100%;
+}
+
+.action-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
 .form-input:focus {
     border-color: #4caf50;
     outline: none;
@@ -475,7 +565,39 @@ h3 {
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
   }
 
+  @keyframes slideIn {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+@media (max-width: 768px) {
+    .modal-content {
+        padding: 1.5rem;
+    }
 
+    .profile-picture {
+        width: 60px;
+        height: 60px;
+    }
+
+    .user-text h2 {
+        font-size: 1.2rem;
+    }
+
+    .user-text p {
+        font-size: 0.8rem;
+    }
+
+    .details-button {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+    }
+}
 
   .maps-grid {
     display: grid;

@@ -91,7 +91,7 @@ const Dashboard = ({ user }) => {
 
     newSocket.on('newMapCreated', (newMap) => {
       setMaps((prevMaps) => [...prevMaps, newMap]);
-      console.log('New map created:', newMap);
+      //console.log('New map created:', newMap);
     });
 
     fetchUserProfile();
@@ -101,43 +101,90 @@ const Dashboard = ({ user }) => {
     };
   }, [user]);
 
-  const handleFileChange = async (e) => {
-    const file = e.target.files[0];
+  function resizeAndCompressImage(file, callback) {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = function (event) {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = function () {
+            const canvas = document.createElement("canvas");
+            const maxWidth = 100;  // Smaller max width
+            const maxHeight = 100; // Smaller max height
+            let width = img.width;
+            let height = img.height;
 
-    if (!file) {
+            // Scale down while keeping the aspect ratio
+            if (width > maxWidth || height > maxHeight) {
+                if (width > height) {
+                    height *= maxWidth / width;
+                    width = maxWidth;
+                } else {
+                    width *= maxHeight / height;
+                    height = maxHeight;
+                }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Convert to Base64 (JPEG format with 50% quality)
+            const compressedBase64 = canvas.toDataURL("image/jpeg", 0.5);
+
+            // Ensure the Base64 string is within Firebase's limit
+            if (compressedBase64.length > 1000) {
+                callback(null, "Compressed image is still too large.");
+            } else {
+                callback(compressedBase64, null);
+            }
+        };
+    };
+}
+const handleFileChange = async (e) => {
+  const file = e.target.files[0];
+
+  if (!file) {
       setError("No file selected.");
       return;
-    }
+  }
 
-    const validExtensions = [".jpg", ".jpeg", ".png"];
-    const fileName = file.name.toLowerCase();
-    const isValidExtension = validExtensions.some((ext) => fileName.endsWith(ext));
+  const validExtensions = [".jpg", ".jpeg", ".png"];
+  const fileName = file.name.toLowerCase();
+  const isValidExtension = validExtensions.some((ext) => fileName.endsWith(ext));
 
-    if (!isValidExtension) {
+  if (!isValidExtension) {
       setError("Please upload a valid image file (.jpg, .jpeg, .png).");
       return;
-    }
+  }
 
-    try {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64String = reader.result;
+  try {
+      // Resize & compress before saving
+      resizeAndCompressImage(file, async (compressedBase64, error) => {
+          if (error) {
+              setError("Image too large after compression. Try a smaller file.");
+              return;
+          }
 
-        // Update Firestore with the Base64 string
-        const userRef = doc(db, "users", user.uid);
-        await updateDoc(userRef, { profilePicture: base64String });
+          // Save the Base64 string in Firestore
+          const userRef = doc(db, "users", user.uid);
+          await updateDoc(userRef, { profilePicture: compressedBase64 });
 
-        // Update local state for UI
-        setProfilePicture(base64String);
-        setError("");
-        alert("Profile picture updated successfully!");
-      };
-      reader.readAsDataURL(file);
-    } catch (error) {
+          // Update Firebase Authentication with an empty photoURL (to avoid the error)
+          await updateProfile(auth.currentUser, { photoURL: "" });
+
+          // Update UI with new profile picture
+          setProfilePicture(compressedBase64);
+          setError("");
+      });
+
+  } catch (error) {
       console.error("Error processing file:", error);
       setError("Failed to process the file. Please try again.");
-    }
-  }; 
+  }
+};
+
 
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
@@ -160,7 +207,7 @@ const Dashboard = ({ user }) => {
         await updateProfile(auth.currentUser, profileData);
         const userRef = doc(db, "users", user.uid);
         await updateDoc(userRef, { username });
-        alert("Profile updated successfully!");
+        //alert("Profile updated successfully!");
         setShowProfileDetails(false);
       }
     } catch (err) {
@@ -180,7 +227,7 @@ const Dashboard = ({ user }) => {
         participants: [user.uid],
         createdAt: new Date()
       });
-      console.log("New map created with ID:", docRef.id);
+      //console.log("New map created with ID:", docRef.id);
       setNewMapName("");
       setSelectedMapId(docRef.id);
       if (socket) {
@@ -201,10 +248,10 @@ const Dashboard = ({ user }) => {
     try {
       await deleteDoc(doc(db, "maps", mapId));
       setMaps((prevMaps) => prevMaps.filter((map) => map.id !== mapId));
-      console.log(`Map with ID: ${mapId} deleted.`);
+      //console.log(`Map with ID: ${mapId} deleted.`);
       setConfirmDelete({ isVisible: false, mapId: null, mapName: "" });
     } catch (err) {
-      console.error("Error deleting map:", err.message);
+      //console.error("Error deleting map:", err.message);
     }
   };
 
@@ -261,10 +308,10 @@ const Dashboard = ({ user }) => {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      console.log("User logged out successfully!");
+      //console.log("User logged out successfully!");
       navigate("/");
     } catch (error) {
-      console.error("Error logging out: ", error.message);
+      //console.error("Error logging out: ", error.message);
     }
   };
 
