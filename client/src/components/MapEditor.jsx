@@ -914,141 +914,130 @@ const renderNode = (node) => {
             Type:
           </label>
           <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-            {/* Solid Line */}
-            <button
-              onClick={() => {
-                const updatedEdges = edges.map((edge) =>
-                  edge.id === selectedEdge.id
-                    ? { ...edge, style: { ...edge.style, strokeDasharray: undefined } }
-                    : edge
-                );
-                setEdges(updatedEdges);
-                setSelectedEdge({
-                  ...selectedEdge,
-                  style: { ...selectedEdge.style, strokeDasharray: undefined },
-                });
-              }}
-              style={{
-                width: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "5px",
-                borderRadius: "8px",
-                border: "1px solid #ddd",
-                cursor: "pointer",
-                backgroundColor: selectedEdge.style?.strokeDasharray
-                  ? "#fff"
-                  : "#4caf50",
-                color: selectedEdge.style?.strokeDasharray ? "#333" : "#fff",
-              }}
-            >
-              Solid
-              <svg height="10" width="50">
-                <line
-                  x1="0"
-                  y1="5"
-                  x2="50"
-                  y2="5"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                />
-              </svg>
-            </button>
+        {/* Solid Line */}
+<button
+  onClick={() => {
+    const updatedEdges = edges.map((edge) =>
+      edge.id === selectedEdge.id
+        ? {
+            ...edge,
+            style: { strokeDasharray: undefined }, // Remove dashes
+            markerEnd: undefined, // Remove arrow
+          }
+        : edge
+    );
+    setEdges(updatedEdges);
+    setSelectedEdge({
+      ...selectedEdge,
+      style: { strokeDasharray: undefined },
+      markerEnd: undefined,
+    });
+  }}
+  style={{
+    width: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "5px",
+    borderRadius: "8px",
+    border: "1px solid #ddd",
+    cursor: "pointer",
+    backgroundColor: selectedEdge.style?.strokeDasharray ? "#fff" : "#4caf50",
+    color: selectedEdge.style?.strokeDasharray ? "#333" : "#fff",
+  }}
+>
+  Solid
+  <svg height="10" width="50">
+    <line x1="0" y1="5" x2="50" y2="5" stroke="currentColor" strokeWidth="2" />
+  </svg>
+</button>
 
-            {/* Dashed Line */}
-            <button
-              onClick={() => {
-                const updatedEdges = edges.map((edge) =>
-                  edge.id === selectedEdge.id
-                    ? { ...edge, style: { ...edge.style, strokeDasharray: "5,5" } }
-                    : edge
-                );
-                setEdges(updatedEdges);
-                setSelectedEdge({
-                  ...selectedEdge,
-                  style: { ...selectedEdge.style, strokeDasharray: "5,5" },
-                });
-              }}
-              style={{
-                width: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "5px",
-                borderRadius: "8px",
-                border: "1px solid #ddd",
-                cursor: "pointer",
-                backgroundColor:
-                  selectedEdge.style?.strokeDasharray === "5,5"
-                    ? "#4caf50"
-                    : "#fff",
-                color: selectedEdge.style?.strokeDasharray === "5,5" ? "#fff" : "#333",
-              }}
-            >
-              Dashed
-              <svg height="10" width="50">
-                <line
-                  x1="0"
-                  y1="5"
-                  x2="50"
-                  y2="5"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeDasharray="5,5"
-                />
-              </svg>
-            </button>
+{/* Dashed Line */}
+<button
+  onClick={() => {
+    const updatedEdges = edges.map((edge) =>
+      edge.id === selectedEdge.id
+        ? {
+            ...edge,
+            style: { strokeDasharray: "5,5" }, // Set dashes
+            markerEnd: undefined, // Remove arrow
+          }
+        : edge
+    );
+    setEdges(updatedEdges);
+    setSelectedEdge({
+      ...selectedEdge,
+      style: { strokeDasharray: "5,5" },
+      markerEnd: undefined,
+    });
+  }}
+  style={{
+    width: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "5px",
+    borderRadius: "8px",
+    border: "1px solid #ddd",
+    cursor: "pointer",
+    backgroundColor: selectedEdge.style?.strokeDasharray === "5,5" ? "#4caf50" : "#fff",
+    color: selectedEdge.style?.strokeDasharray === "5,5" ? "#fff" : "#333",
+  }}
+>
+  Dashed
+  <svg height="10" width="50">
+    <line
+      x1="0"
+      y1="5"
+      x2="50"
+      y2="5"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeDasharray="5,5"
+    />
+  </svg>
+</button>
 
-            {/* Arrow Line */}
-            <button
-              onClick={() => {
-                const updatedEdges = edges.map((edge) =>
-                  edge.id === selectedEdge.id
-                    ? {
-                        ...edge,
-                        markerEnd: { type: "arrowclosed" },
-                        style: { ...edge.style, strokeDasharray: undefined },
-                      }
-                    : edge
-                );
-                setEdges(updatedEdges);
-                setSelectedEdge({
-                  ...selectedEdge,
-                  markerEnd: { type: "arrowclosed" },
-                  style: { ...selectedEdge.style, strokeDasharray: undefined },
-                });
-              }}
-              style={{
-                width: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "5px",
-                borderRadius: "8px",
-                border: "1px solid #ddd",
-                cursor: "pointer",
-                backgroundColor: selectedEdge.markerEnd?.type ? "#4caf50" : "#fff",
-                color: selectedEdge.markerEnd?.type ? "#fff" : "#333",
-              }}
-            >
-              Arrow
-              <svg height="10" width="50">
-                <line
-                  x1="0"
-                  y1="5"
-                  x2="40"
-                  y2="5"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                />
-                <polygon
-                  points="40,0 50,5 40,10"
-                  fill="currentColor"
-                  stroke="currentColor"
-                />
-              </svg>
-            </button>
+{/* Arrow Line */}
+<button
+  onClick={() => {
+    const updatedEdges = edges.map((edge) =>
+      edge.id === selectedEdge.id
+        ? {
+            ...edge,
+            markerEnd: { type: "arrowclosed" }, // Set arrow
+            style: { strokeDasharray: undefined }, // Remove dashes
+          }
+        : edge
+    );
+    setEdges(updatedEdges);
+    setSelectedEdge({
+      ...selectedEdge,
+      markerEnd: { type: "arrowclosed" },
+      style: { strokeDasharray: undefined },
+    });
+  }}
+  style={{
+    width: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "5px",
+    borderRadius: "8px",
+    border: "1px solid #ddd",
+    cursor: "pointer",
+    backgroundColor: selectedEdge.markerEnd?.type ? "#4caf50" : "#fff",
+    color: selectedEdge.markerEnd?.type ? "#fff" : "#333",
+  }}
+>
+  Arrow
+  <svg height="10" width="50">
+    <line x1="0" y1="5" x2="40" y2="5" stroke="currentColor" strokeWidth="2" />
+    <polygon points="40,0 50,5 40,10" fill="currentColor" stroke="currentColor" />
+  </svg>
+</button>
+
+
           </div>
         </div>
       </div>
