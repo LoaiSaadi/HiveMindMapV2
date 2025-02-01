@@ -807,18 +807,20 @@ const renderNode = (node) => {
       updateFirebase(nodes, edges); // Update Firebase with the new link
     }
   };
-  
-
   return (
     <div ref={reactFlowWrapper} style={{ backgroundColor: "#d9fdd3", width: "100%", height: "100vh", position: "relative" }}>
       <div style={{ width: "80%", height: "100%" }}>
       <Panel position="top-left">
-      <div className="description" style={{ padding: '10px', background:"linear-gradient(to bottom, #4caf50, #81c784)",color: "#ffffff", boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)", borderRadius: '4px' }}>
+      <div className="description" style={{ padding: '2px', background:"linear-gradient(to bottom, #4caf50, #81c784)",color: "#ffffff", boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)", borderRadius: '4px',height:"60%" }}>
       <p>Keyboard Shortcuts:</p>
-      <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+      <ul style={{ margin: 0, padding: 0, listStyle: 'none', fontSize: "10px"}}>
         <li><strong>N:</strong> Add a new node</li>
         <li><strong>Del/Backspace:</strong> Delete selected node</li>
         <li><strong>Right-click:</strong> Rename a node , Add node</li>
+        <li><strong>Double-click on node:</strong> Rename a node </li>
+        <li><strong>Click on node:</strong> open node details </li>
+        <li><strong>Click on edge:</strong> open edge details </li>
+        <li><strong>Click an the background:</strong> close node\edge details </li>
       </ul>
       <p>Total Nodes: {nodes.length}</p>
     </div>

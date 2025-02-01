@@ -73,147 +73,69 @@ const Dashboard = ({ user }) => {
       try {
         const userRef = doc(db, "users", user.uid);
         const userDoc = await getDoc(userRef);
-
         if (userDoc.exists()) {
           const userData = userDoc.data();
-          setProfilePicture(userData.profilePicture || ""); // Set the profile picture
+          setProfilePicture(userData.profilePicture || "");
           setUsername(userData.username || "");
           setEmail(userData.email || "");
         }
       } catch (error) {
-        console.error("Error fetching user profile:", error);
         setError("Failed to load profile data. Please try again.");
       }
     };
 
-    const newSocket = io('http://localhost:5000');
+    const newSocket = io("http://localhost:5000");
     setSocket(newSocket);
 
-    newSocket.on('newMapCreated', (newMap) => {
+    newSocket.on("newMapCreated", (newMap) => {
       setMaps((prevMaps) => [...prevMaps, newMap]);
-      //console.log('New map created:', newMap);
     });
 
     fetchUserProfile();
-
-    return () => {
-      newSocket.disconnect();
-    };
+    return () => newSocket.disconnect();
   }, [user]);
 
-  function resizeAndCompressImage(file, callback) {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = function (event) {
-        const img = new Image();
-        img.src = event.target.result;
-        img.onload = function () {
-            const canvas = document.createElement("canvas");
-            const maxWidth = 100;  // Smaller max width
-            const maxHeight = 100; // Smaller max height
-            let width = img.width;
-            let height = img.height;
 
-            // Scale down while keeping the aspect ratio
-            if (width > maxWidth || height > maxHeight) {
-                if (width > height) {
-                    height *= maxWidth / width;
-                    width = maxWidth;
-                } else {
-                    width *= maxHeight / height;
-                    height = maxHeight;
-                }
-            }
 
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext("2d");
-            ctx.drawImage(img, 0, 0, width, height);
-
-            // Convert to Base64 (JPEG format with 50% quality)
-            const compressedBase64 = canvas.toDataURL("image/jpeg", 0.5);
-
-            // Ensure the Base64 string is within Firebase's limit
-            if (compressedBase64.length > 1000) {
-                callback(null, "Compressed image is still too large.");
-            } else {
-                callback(compressedBase64, null);
-            }
-        };
-    };
-}
-const handleFileChange = async (e) => {
+const handleFileChange = (e) => {
   const file = e.target.files[0];
-
-  if (!file) {
-      setError("No file selected.");
-      return;
-  }
-
-  const validExtensions = [".jpg", ".jpeg", ".png"];
-  const fileName = file.name.toLowerCase();
-  const isValidExtension = validExtensions.some((ext) => fileName.endsWith(ext));
-
-  if (!isValidExtension) {
-      setError("Please upload a valid image file (.jpg, .jpeg, .png).");
-      return;
-  }
-
-  try {
-      // Resize & compress before saving
-      resizeAndCompressImage(file, async (compressedBase64, error) => {
-          if (error) {
-              setError("Image too large after compression. Try a smaller file.");
-              return;
-          }
-
-          // Save the Base64 string in Firestore
-          const userRef = doc(db, "users", user.uid);
-          await updateDoc(userRef, { profilePicture: compressedBase64 });
-
-          // Update Firebase Authentication with an empty photoURL (to avoid the error)
-          await updateProfile(auth.currentUser, { photoURL: "" });
-
-          // Update UI with new profile picture
-          setProfilePicture(compressedBase64);
-          setError("");
-      });
-
-  } catch (error) {
-      console.error("Error processing file:", error);
-      setError("Failed to process the file. Please try again.");
+  if (file && file.type.startsWith("image/")) {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result;
+      setProfilePicture(base64String);
+    };
+    reader.readAsDataURL(file);
+  } else {
+    setError("Please upload a valid image file.");
   }
 };
 
 
-  const handleProfileUpdate = async (e) => {
-    e.preventDefault();
-    setError("");
-    try {
-      const usersQuery = query(collection(db, "users"), where("username", "==", username));
-      const existingUsers = await getDocs(usersQuery);
-      if (!existingUsers.empty) {
-        const matchingUser = existingUsers.docs.find((doc) => doc.id !== user.uid);
-        if (matchingUser) {
-          setError("Username is already taken. Please choose another one.");
-          return;
-        }
+const handleProfileUpdate = async (e) => {
+  e.preventDefault();
+  setError("");
+  try {
+    const usersQuery = query(collection(db, "users"), where("username", "==", username));
+    const existingUsers = await getDocs(usersQuery);
+    if (!existingUsers.empty) {
+      const matchingUser = existingUsers.docs.find((doc) => doc.id !== user.uid);
+      if (matchingUser) {
+        setError("Username is already taken. Please choose another one.");
+        return;
       }
-      if (auth.currentUser) {
-        const profileData = {
-          displayName: username,
-          photoURL: profilePicture,
-        };
-        await updateProfile(auth.currentUser, profileData);
-        const userRef = doc(db, "users", user.uid);
-        await updateDoc(userRef, { username });
-        //alert("Profile updated successfully!");
-        setShowProfileDetails(false);
-      }
-    } catch (err) {
-      setError(err.message);
     }
-  };
+    if (auth.currentUser) {
+      await updateProfile(auth.currentUser, { displayName: username });
+      const userRef = doc(db, "users", user.uid);
+      await updateDoc(userRef, { username, profilePicture });
+      setShowProfileDetails(false);
+    }
+  } catch (err) {
+    setError(err.message);
+  }
+};
+
 
   const createNewMap = async (e) => {
     e.preventDefault();
@@ -298,6 +220,21 @@ const handleFileChange = async (e) => {
       setError("An error occurred while trying to join the map. Please try again.");
     }
   };
+  const handleUsernameChange = async (e) => {
+    const newUsername = e.target.value;
+    setUsername(newUsername);
+    try {
+      await updateProfile(auth.currentUser, { displayName: newUsername });
+      await updateDoc(doc(db, "users", user.uid), { username: newUsername });
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      setShowProfileDetails(false);
+    }
+  };
 
   const cancelJoinMap = () => {
     setJoinMapName("");
@@ -342,7 +279,7 @@ const handleFileChange = async (e) => {
       </header>
 
       {showProfileDetails && (
-        <div className="modal">
+        <div className="modal" onKeyDown={handleKeyDown} tabIndex={0}>
           <div className="modal-content">
             <div className="modal-header">
               <h2>Your Profile</h2>
@@ -353,7 +290,7 @@ const handleFileChange = async (e) => {
                 &times;
               </button>
             </div>
-            <form onSubmit={handleProfileUpdate} className="profile-form">
+            <div className="profile-form">
               <div className="form-group">
                 <label>Email:</label>
                 <input
@@ -368,7 +305,7 @@ const handleFileChange = async (e) => {
                 <input
                   type="text"
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  onChange={handleUsernameChange}
                   className="form-input"
                 />
               </div>
@@ -382,12 +319,7 @@ const handleFileChange = async (e) => {
                 />
               </div>
               {error && <p className="error-text">{error}</p>}
-              <div className="form-actions">
-                <button type="submit" className="action-button">
-                  Save Changes
-                </button>
-              </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
