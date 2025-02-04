@@ -1,70 +1,71 @@
-# Getting Started with Create React App
+MindMapProject
+Background and Motivation
+This project was developed as part of my studies for my degree at the university of Haifa, under the supervision of Professor Yotam Hod. The goal of MindMapProject is to create an interactive real-time mind mapping tool that enables users to visually organize their thoughts, structure ideas, and collaborate efficiently.
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+With Firebase's real-time database and Firestore, the project ensures instant updates, allowing multiple users to work on a mind map simultaneously. This project leverages JavaScript and Firebase for a smooth and responsive user experience.
 
-## Available Scripts
+Project Overview
+he MindMapProject provides a real-time collaborative platform where users can create, edit, and manage mind maps dynamically. The system allows multiple users to work together in real time, ensuring an interactive and seamless experience. Users can add descriptions, rename nodes and edges, attach links, and manage access through unique map IDs.
 
-In the project directory, you can run:
+Key functionalities include:
 
-### `npm start`
+Real-time collaboration: Instant updates with Firebase Realtime Database.
+Access control with unique Map IDs: Ensuring only authorized users can join specific maps.
+User authentication: Secure login and account management.
+Visualization & organization tools: Drag-and-drop node positioning, renaming, linking, and more.
+Live participant tracking: See who is currently working on the mind map.
+Cloud synchronization: Auto-save and retrieval of mind maps from Firebase.
+This tool is designed for students, professionals, and teams who need a structured approach to brainstorming, project planning, and knowledge management.
+Features
+✔️ Real-Time Editing – Instant updates with Firebase Realtime Database
+✔️ User Registration/Login – Secure authentication with Firebase
+✔️ Mind Map Creation – Add, edit, and delete nodes and edges dynamically
+✔️ Join a Map with a Unique ID – Users can join an existing mind map by entering its unique map ID
+✔️ View Active Participants – Users can see all participants currently working on the map
+✔️ Live Presence Updates – Users can see real-time activity when others add, edit, move, or delete nodes
+✔️ Drag-and-Drop Nodes – Organize ideas with a smooth UI
+✔️ Auto-Save & Cloud Sync – Data is automatically stored in Firebase
+✔️ Collaboration Support – Multiple users can work on the same mind map
+✔️ Custom Themes – Different visualization styles to suit various workflows
+✔️ Unique Map ID System – Every mind map has a unique ID, ensuring that only authorized users can access and edit the map
+✔️ Descriptions for Nodes and Maps – Each node can have a detailed description, and the entire map can also have an overview description
+✔️ Renaming Nodes and Edges – Users can rename nodes and edges dynamically to refine their mind maps
+✔️ Adding Links to Nodes – Each node can include a clickable link to external resources or references
+✔️ Profile Page – Displays user information and provides editing options
+✔️ Logout and Password Reset – Options for users to log out and reset their passwords
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
 
-### `npm test`
+Tech Stack:
+The project is built using the following technologies:
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Frontend: JavaScript, HTML, CSS
+Backend: Firebase (Authentication, Firestore, Realtime Database)
+Development Tools: Visual Studio Code, Git & GitHub
 
-### `npm run build`
+🚀 Installation and Setup
+To run the project locally, follow these steps:
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+1️⃣ Clone the Repository:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+git clone https://github.com/IsraaBsoul/MindMapProject.git
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Navigate to the project directory:
+cd MindMapProject
 
-### `npm run eject`
+2️⃣ Install Dependencies:
+Run the following command to install necessary packages:
+npm install
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+3️⃣ Configure Firebase:
+Create a Firebase project at Firebase Console
+Enable Authentication, Firestore, and Realtime Database
+Copy your Firebase configuration and add it to your project in:
+/src/firebase-config.js
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+4️⃣ Run the Application:
+Start the development server:
+npm start
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Then, open your browser and visit:
+http://localhost:3000
