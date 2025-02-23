@@ -76,13 +76,13 @@ Navigate to the project directory:
 
 cd MindMapProject
 
-2️. Install Dependencies:
+2. Install Dependencies:
 
 Run the following command to install necessary packages:
 
 npm install
 
-3️. Configure Firebase:
+3. Configure Firebase:
 
 Create a Firebase project at Firebase Console
 
@@ -92,16 +92,13 @@ Copy your Firebase configuration and add it to your project in:
 
 /src/firebase-config.js
 
-4️. Run the Application:
+4. Run the Application:
 
 Start the development server:
 
 npm start
 
 Then, open your browser and visit:
-<<<<<<< HEAD
 
 http://localhost:3000
-=======
-http://localhost:5000
->>>>>>> 148bbaad261b8726ce119c2b3d1707ac6c3d386a
+
