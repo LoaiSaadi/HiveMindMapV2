@@ -99,5 +99,9 @@ Start the development server:
 npm start
 
 Then, open your browser and visit:
+<<<<<<< HEAD
 
 http://localhost:3000
+=======
+http://localhost:5000
+>>>>>>> 148bbaad261b8726ce119c2b3d1707ac6c3d386a
