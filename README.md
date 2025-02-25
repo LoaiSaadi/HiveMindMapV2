@@ -61,7 +61,7 @@ Logout and Password Reset : Options for users to log out and reset their passwor
 ##  Tech Stack
 - React (JavaScript, HTML, CSS) 
 - Firebase (Authentication, Firestore, Realtime Database)  
-- Development Tools:*Visual Studio Code, Git & GitHub  
+- Development Tools:Visual Studio Code, Git & GitHub  
 
 
 ## Installation and Setup
@@ -77,12 +77,12 @@ then a JSON file will be downloaded to your computer.
 "we will use this file later ".
 
 Enable Firebase Services:
-1. Firebase Authentication is used to manage user sign-ups, logins, and authentication state.
+1. Firebase Authentication is used to manage user sign-ups, logins, and authentication state.<br>
 In the Firebase Console, go to the Authentication section and enable the Email/Password sign-in methods.
-2. Cloud Firestore:
+2. Cloud Firestore:<br>
 Go to Firestore Database and Create a new database.
-3. Realtime Database:
-Go to Realtime Database and click Create Database.
+3. Realtime Database:<br>
+Go to Realtime Database and click Create Database.<br>
 Set the database rules to allow necessary read/write access (public access).
 
 ## Run the project:
@@ -90,17 +90,17 @@ After you set up Firebase, you can follow these steps to run the project:
 
 1. Clone the Repository: (https://github.com/IsraaBsoul/MindMapProject.git)
 *Then, open the project and update the Firebase configuration:*
-   a. Open the file: firebaseConfig -> server\config\firebaseConfig.js, 
+   a. Open the file: firebaseConfig -> server\config\firebaseConfig.js, <br>
    and replace the placeholder path with the path to your downloaded JSON file->const serviceAccount = require("path/to/your/firebase-key.json");
 
-   b. Go to the Firebase Console for your project-> navigate to Project Settings-> Scroll down to the "Your apps" section
+   b. Go to the Firebase Console for your project-> navigate to Project Settings-> Scroll down to the "Your apps" section <br>
    then copy your Firebase configuration values, and replace the existing values in the `client\src\firebase.js` file with your own configuration.
 
 2. Install necessary packages for React and Firebase: npm install
 3. Navigate to the Project Directory: cd MindMapProject
-4. Run the Application:
-You should run the server first-> Open a terminal and navigate to the server directory: cd server -> Then start the server: npm start.
-Open another terminal and navigate to the client directory: cd client-> Then start the client: npm start.
+4. Run the Application:<br>
+You should run the server first-> Open a terminal and navigate to the server directory: cd server -> Then start the server: npm start.<br>
+Open another terminal and navigate to the client directory: cd client-> Then start the client: npm start.<br>
 ![image](https://github.com/user-attachments/assets/49893958-7f81-4962-babe-63924c6a28e2)
 ![image](https://github.com/user-attachments/assets/a9b21526-e727-4fbb-a4cd-60287292ddfb)
 
