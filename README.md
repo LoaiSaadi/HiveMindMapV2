@@ -66,7 +66,7 @@ Logout and Password Reset : Options for users to log out and reset their passwor
 
 ## Installation and Setup
 
-##Firebase
+## Firebase
 We used Firebase as our backend, in order to run our project, you need to setup *Firebase*:
 1.Go to the Firebase Console and create a new project.
 2.In the Project Settings, navigate to the General tab and register your app -> choose Web as the platform.
@@ -84,7 +84,7 @@ Go to Firestore Database and Create a new database.
 Go to Realtime Database and click Create Database.
 Set the database rules to allow necessary read/write access (public access).
 
-##Run the project:
+## Run the project:
 After you set up Firebase, you can follow these steps to run the project:
 1.Clone the Repository: (https://github.com/IsraaBsoul/MindMapProject.git)
 *Then, open the project and update the Firebase configuration:*
