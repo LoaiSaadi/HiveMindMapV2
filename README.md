@@ -88,8 +88,8 @@ Set the database rules to allow necessary read/write access (public access).
 ## Run the project:
 After you set up Firebase, you can follow these steps to run the project:
 
-1. Clone the Repository: (https://github.com/IsraaBsoul/MindMapProject.git)
-*Then, open the project and update the Firebase configuration:*<br>
+1. Clone the Repository: (https://github.com/IsraaBsoul/MindMapProject.git)<br>
+Then, open the project and update the Firebase configuration:<br>
    a. Open the file: firebaseConfig -> server\config\firebaseConfig.js, <br>
    and replace the placeholder path with the path to your downloaded JSON file->const serviceAccount = require("path/to/your/firebase-key.json");
 
