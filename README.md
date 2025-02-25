@@ -42,7 +42,7 @@ Auto-Save & Cloud Sync : Data is automatically stored in Firebase
 
 Collaboration Support : Multiple users can work on the same mind map 
 
-Custom Themes : Different visualization styles to suit various workflows  
+Custom Themes : The users can color the edges/nodes in the map and they can choose specific type of edges to connect the nodes, they can custom their maps the way they like   
 
 Unique Map ID System : Every mind map has a unique ID, ensuring that only authorized users can access and edit the map  
 
@@ -59,46 +59,47 @@ Logout and Password Reset : Options for users to log out and reset their passwor
 
 
 ##  Tech Stack
-- Frontend: JavaScript, HTML, CSS  
-- Backend: Firebase (Authentication, Firestore, Realtime Database)  
+- React (JavaScript, HTML, CSS) 
+- Firebase (Authentication, Firestore, Realtime Database)  
 - Development Tools:*Visual Studio Code, Git & GitHub  
 
 
 ## Installation and Setup
 
-To run the project locally, follow these steps:
+##Firebase
+We used Firebase as our backend, in order to run our project, you need to setup *Firebase*:
+1.Go to the Firebase Console and create a new project.
+2.In the Project Settings, navigate to the General tab and register your app -> choose Web as the platform.
+3.Get Your Firebase Service Account Key:
+Navigate to Project Settings,Go to the Service accounts tab-> Click Generate new private key under the Firebase Admin SDK section:
+then a JSON file will be downloaded to your computer. 
+"we will use this file later ".
 
-1. Clone the Repository:
+Enable Firebase Services:
+1. Firebase Authentication is used to manage user sign-ups, logins, and authentication state.
+In the Firebase Console, go to the Authentication section and enable the Email/Password sign-in methods.
+2. Cloud Firestore:
+Go to Firestore Database and Create a new database.
+3.Realtime Database:
+Go to Realtime Database and click Create Database.
+Set the database rules to allow necessary read/write access (public access).
 
-git clone https://github.com/IsraaBsoul/MindMapProject.git
+##Run the project:
+After you set up Firebase, you can follow these steps to run the project:
+1.Clone the Repository: (https://github.com/IsraaBsoul/MindMapProject.git)
+*Then, open the project and update the Firebase configuration:*
+   a. Open the file: firebaseConfig -> server\config\firebaseConfig.js, 
+   and replace the placeholder path with the path to your downloaded JSON file->const serviceAccount = require("path/to/your/firebase-key.json");
 
-Navigate to the project directory:
+   b. Go to the Firebase Console for your project-> navigate to Project Settings-> Scroll down to the "Your apps" section
+   then copy your Firebase configuration values, and replace the existing values in the `client\src\firebase.js` file with your own configuration.
 
-cd MindMapProject
+2. Install necessary packages for React and Firebase: npm install
+3.Navigate to the Project Directory: cd MindMapProject
+4.Run the Application:
+You should run the server first-> Open a terminal and navigate to the server directory: cd server -> Then start the server: npm start.
+Open another terminal and navigate to the client directory: cd client-> Then start the client: npm start.
+![image](https://github.com/user-attachments/assets/49893958-7f81-4962-babe-63924c6a28e2)
+![image](https://github.com/user-attachments/assets/ff2db4ab-6a8a-4952-9abf-f8b70e9405a9)
 
-2. Install Dependencies:
-
-Run the following command to install necessary packages:
-
-npm install
-
-3. Configure Firebase:
-
-Create a Firebase project at Firebase Console
-
-Enable Authentication, Firestore, and Realtime Database
-
-Copy your Firebase configuration and add it to your project in:
-
-/src/firebase-config.js
-
-4. Run the Application:
-
-Start the development server:
-
-npm start
-
-Then, open your browser and visit:
-
-http://localhost:3000
 
