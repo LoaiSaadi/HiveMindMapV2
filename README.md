@@ -100,6 +100,7 @@ After you set up Firebase, you can follow these steps to run the project:
 You should run the server first-> Open a terminal and navigate to the server directory: cd server -> Then start the server: npm start.
 Open another terminal and navigate to the client directory: cd client-> Then start the client: npm start.
 ![image](https://github.com/user-attachments/assets/49893958-7f81-4962-babe-63924c6a28e2)
-![image](https://github.com/user-attachments/assets/ff2db4ab-6a8a-4952-9abf-f8b70e9405a9)
+![image](https://github.com/user-attachments/assets/a9b21526-e727-4fbb-a4cd-60287292ddfb)
+
 
 
