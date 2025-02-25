@@ -101,10 +101,10 @@ Then, open the project and update the Firebase configuration:<br>
 4. Run the Application:<br>
 You should run the server first-> Open a terminal and navigate to the server directory: cd server -> Then start the server: npm start.<br>
 Open another terminal and navigate to the client directory: cd client-> Then start the client: npm start.<br>
-*DONE*
+*DONE :)*
 ![image](https://github.com/user-attachments/assets/49893958-7f81-4962-babe-63924c6a28e2)
 
-![image](https://github.com/user-attachments/assets/24b94d77-3dfc-4a07-b58f-5ca7a96d3cce)
+ ![image](https://github.com/user-attachments/assets/24b94d77-3dfc-4a07-b58f-5ca7a96d3cce)
 
 
 
