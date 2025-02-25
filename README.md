@@ -68,10 +68,10 @@ Logout and Password Reset : Options for users to log out and reset their passwor
 
 ## Firebase
 We used Firebase as our backend, in order to run our project, you need to setup *Firebase*:
-1.Go to the Firebase Console and create a new project.
 
-2.In the Project Settings, navigate to the General tab and register your app -> choose Web as the platform.
-3.Get Your Firebase Service Account Key:
+1. Go to the Firebase Console and create a new project.
+2. In the Project Settings, navigate to the General tab and register your app -> choose Web as the platform.
+3. Get Your Firebase Service Account Key:
 Navigate to Project Settings,Go to the Service accounts tab-> Click Generate new private key under the Firebase Admin SDK section:
 then a JSON file will be downloaded to your computer. 
 "we will use this file later ".
