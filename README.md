@@ -104,7 +104,8 @@ Open another terminal and navigate to the client directory: cd client-> Then sta
 *DONE*
 ![image](https://github.com/user-attachments/assets/49893958-7f81-4962-babe-63924c6a28e2)
 
-![image](https://github.com/user-attachments/assets/7b319050-ed0f-40e2-a7ac-6e5c5f943b21)
+![image](https://github.com/user-attachments/assets/24b94d77-3dfc-4a07-b58f-5ca7a96d3cce)
+
 
 
 
