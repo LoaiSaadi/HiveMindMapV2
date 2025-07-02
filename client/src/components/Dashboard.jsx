@@ -138,6 +138,7 @@ const handleProfileUpdate = async (e) => {
 
 
   const createNewMap = async (e) => {
+    console.log("New map created with ID:", newMapName);
     e.preventDefault();
     if (!newMapName.trim()) return;
     try {
@@ -149,7 +150,7 @@ const handleProfileUpdate = async (e) => {
         participants: [user.uid],
         createdAt: new Date()
       });
-      //console.log("New map created with ID:", docRef.id);
+      console.log("New map created with ID:", newMapName);
       setNewMapName("");
       setSelectedMapId(docRef.id);
       if (socket) {

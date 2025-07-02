@@ -1,0 +1,3 @@
+.env
+server/secrets/
+server/secrets/firebase-service-account.json

@@ -190,11 +190,14 @@ const MapEditor = ({ mapId }) => {
     
           console.log("🔥 Final Data Sent to Firebase:", updateData);
     
+          // updateDoc(mapRef, updateData)
+          //   .then(() => {
+          //     console.log("✅ Firebase update successful!");
+          //   })
+          //   .catch((err) => console.error("❌ Firebase update failed:", err));
           updateDoc(mapRef, updateData)
-            .then(() => {
-              console.log("✅ Firebase update successful!");
-            })
-            .catch((err) => console.error("❌ Firebase update failed:", err));
+    .then(() => console.log("✅ Firebase update successful!"))
+    .catch((err) => console.error("❌ Firebase update failed:", err));
     
           // Update refs to current values
           prevNodesRef.current = newNodes;

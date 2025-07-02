@@ -6,7 +6,7 @@
     "@reactflow/node-resizer": "^2.2.14",
     "@xyflow/react": "^12.4.2",
     "cra-template": "1.2.0",
-    "firebase": "^11.0.2",
+    "firebase": "^11.10.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.0.2",
