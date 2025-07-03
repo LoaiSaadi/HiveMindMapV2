@@ -17,14 +17,16 @@ import { getDatabase } from "firebase/database";
 //   measurementId: "G-TBJY5KWH2W"
 // };
 
+
+
 const firebaseConfig = {
-  apiKey: "AIzaSyDda5MUmTcGFqT8uuc7K-AS2zGTEWfw3Fo",
-  authDomain: "hivemindmap-a47bd.firebaseapp.com",
-  databaseURL: "https://hivemindmap-a47bd-default-rtdb.firebaseio.com",
-  projectId: "hivemindmap-a47bd",
-  storageBucket: "hivemindmap-a47bd.firebasestorage.app",
-  messagingSenderId: "376543632813",
-  appId: "1:376543632813:web:1b8196ed63957245279524"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 // Initialize Firebase
