@@ -6,19 +6,6 @@ import { getStorage } from "firebase/storage";
 import { getDatabase } from "firebase/database";
 // Your web app's Firebase configuration
 
-// OLD
-// const firebaseConfig = {
-//   apiKey: "AIzaSyBOPd8Wbr02Qfc4-lAm0Yw8_hScThteHYo",
-//   authDomain: "mindmapapp-f4b64.firebaseapp.com",
-//   projectId: "mindmapapp-f4b64",
-//   storageBucket: "mindmapapp-f4b64.appspot.com",
-//   messagingSenderId: "177274587651",
-//   appId: "1:177274587651:web:9faa639597e0bf7f3edc36",
-//   measurementId: "G-TBJY5KWH2W"
-// };
-
-
-
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
