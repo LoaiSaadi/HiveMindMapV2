@@ -10,7 +10,7 @@ import ReactFlow, {
 
 } from "reactflow";
 import "reactflow/dist/style.css";
-import { doc, updateDoc, onSnapshot, setDoc,collection, getDoc } from "firebase/firestore";
+import { doc, updateDoc, onSnapshot, setDoc,collection, getDoc, serverTimestamp, deleteDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import io from "socket.io-client";
 import { useNavigate } from "react-router-dom";
@@ -219,23 +219,55 @@ const MapEditor = ({ mapId }) => {
     }, []);
 
   
-  const updateCursor = useCallback(
-    async (x, y) => {
-      try {
-        const cursorData = {
-          x,
-          y,
-          username: auth.currentUser?.displayName || "Unknown User",
-          color: "#FF5733", // Unique color for this user
-        };
-        const cursorRef = doc(db, `maps/${mapId}/cursors/${currentUserId}`);
-        await setDoc(cursorRef, cursorData);
-      } catch (err) {
-        console.error("Cursor update failed:", err);
-      }
-    },
-    [mapId, currentUserId]
-  );
+  // const updateCursor = useCallback(
+  //   async (x, y) => {
+  //     try {
+  //       const cursorData = {
+  //         x,
+  //         y,
+  //         username: auth.currentUser?.displayName || "Unknown User",
+  //         color: "#FF5733", // Unique color for this user
+  //       };
+  //       const cursorRef = doc(db, `maps/${mapId}/cursors/${currentUserId}`);
+  //       await setDoc(cursorRef, cursorData);
+  //     } catch (err) {
+  //       console.error("Cursor update failed:", err);
+  //     }
+  //   },
+  //   [mapId, currentUserId]
+  // );
+
+
+
+  const updateCursor = useCallback(async (x, y) => {
+    try {
+      if (!currentUserId) return;
+      
+      const cursorRef = doc(db, `maps/${mapId}/cursors/${currentUserId}`);
+      await setDoc(cursorRef, {
+        x,
+        y,
+        username: auth.currentUser?.displayName || "Anonymous",
+        color: "#FF5733",
+        lastUpdated: serverTimestamp() // Now properly imported
+      }, { merge: true });
+    } catch (error) {
+      console.error("Cursor update error:", error);
+    }
+  }, [mapId, currentUserId]);
+  
+  // // Cleanup effect
+  // useEffect(() => {
+  //   return () => {
+  //     if (currentUserId) {
+  //       const cursorRef = doc(db, `maps/${mapId}/cursors/${currentUserId}`);
+  //       deleteDoc(cursorRef).catch(console.error); // Now properly imported
+  //     }
+  //   };
+  // }, [mapId, currentUserId]);
+
+
+
   const onEdgeClick = useCallback((event, edge) => {
   //event.stopPropagation();
   setSelectedEdge(edge); // Set the clicked edge as selected
