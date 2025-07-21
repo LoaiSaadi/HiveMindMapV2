@@ -11,15 +11,16 @@ import ReactFlow, {
 import "reactflow/dist/style.css";
 import { createClient } from '@supabase/supabase-js';
 import io from "socket.io-client";
-import { useNavigate } from "react-router-dom";
+import { data, useNavigate } from "react-router-dom";
 import ParticipantBox from "./ParticipantBox";
-import { getAuth } from "firebase/auth";
 import "../styles/MapEditor.css";
 
-// Initialize Supabase client
+// Initialize Supabase client (only once at the top)
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
 const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+const socket = io("http://localhost:5000");
 
 // Context Menu Component
 const ContextMenu = ({ onClick, onClose, position, onRename }) => {
@@ -81,9 +82,6 @@ const ContextMenu = ({ onClick, onClose, position, onRename }) => {
   );
 };
 
-const auth = getAuth();
-const currentUserId = auth.currentUser?.uid;
-const socket = io("http://localhost:5000");
 
 const initialNodes = [
   {
@@ -106,6 +104,45 @@ const initialEdges = [
 ];
 
 const MapEditor = ({ mapId }) => {
+  // State for current user ID
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
+
+  // Initialize auth when component mounts
+  useEffect(() => {
+    // 1. Check current session
+    const checkSession = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+        // Fetch additional user profile if needed
+        const { data: profile } = await supabase
+          .from('users') // ex 'profiles'
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        setUserProfile(profile);
+      }
+    };
+
+    checkSession();
+
+    // 2. Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        setCurrentUserId(session.user.id);
+      } else {
+        setCurrentUserId(null);
+        setUserProfile(null);
+      }
+    });
+
+    return () => {
+      // Clean up listener
+      subscription?.unsubscribe();
+    };
+  }, []);
+
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [nodeId, setNodeId] = useState(2);
@@ -178,27 +215,34 @@ const MapEditor = ({ mapId }) => {
     [mapId, mapName, mapDescription, nodeNotes, nodeData]
   );
 
-  const updateCursor = useCallback(async (x, y) => {
-    try {
-      if (!currentUserId) return;
+  // const updateCursor = useCallback(async (x, y) => {
+  //   try {
+  //     if (!currentUserId) return;
       
-      const { error } = await supabase
-        .from('cursors')
-        .upsert({
-          id: currentUserId,
-          map_id: mapId,
-          x,
-          y,
-          username: auth.currentUser?.displayName || "Anonymous",
-          color: "#FF5733",
-          last_updated: new Date()
-        }, { onConflict: 'id' });
+  //     // Get current user info from Supabase
+  //     const { data: { user } } = await supabase.auth.getUser();
+      
+  //     const { error } = await supabase
+  //       .from('cursors')
+  //       .upsert({
+  //         id: currentUserId,
+  //         map_id: mapId,
+  //         x,
+  //         y,
+  //         username: user?.user_metadata?.full_name || 
+  //                  user?.email?.split('@')[0] || 
+  //                  "Anonymous",
+  //         color: "#FF5733",
+  //         last_updated: new Date()
+  //       }, { onConflict: 'id' });
 
-      if (error) throw error;
-    } catch (error) {
-      console.error("Cursor update error:", error);
-    }
-  }, [mapId, currentUserId]);
+  //     if (error) throw error;
+  //   } catch (error) {
+  //     console.error("Cursor update error:", error);
+  //   }
+  // }, [mapId, currentUserId]);
+
+
 
   const onEdgeDoubleClick = useCallback((event, edge) => {
     event.preventDefault();
@@ -412,17 +456,56 @@ const MapEditor = ({ mapId }) => {
     [nodes, updateSupabase]
   );
 
+  // const addNode = useCallback(async (position = { x: Math.random() * 400, y: Math.random() * 400 }) => {
+  //   const newNodeId = nodes.length ? Math.max(...nodes.map((node) => parseInt(node.id))) + 1 : 1;
+  //   const auth = getAuth();
+  //   const currentUser = auth.currentUser;
+
+  //   const newNode = {
+  //     id: newNodeId.toString(),
+  //     data: { label: `Node ${newNodeId}` },
+  //     position,
+  //     style: { border: `2px solid ${borderColor}` },
+  //     creator: currentUser?.uid || "unknown",
+  //     creationTimestamp: new Date().toISOString(),
+  //   };
+
+  //   setNodes((nds) => {
+  //     const updatedNodes = [...nds, newNode];
+  //     updateSupabase(updatedNodes, edges);
+  //     return updatedNodes;
+  //   });
+
+  //   setNodeId((id) => id + 1);
+  //   socket.emit("node-added", newNode);
+
+  //   if (currentUser) {
+  //       const { data: userData, error } = await supabase
+  //         .from('profiles')
+  //         .select('*')
+  //         .eq('id', currentUser.uid)
+  //         .single();
+
+  //       if (userData) {
+  //           setNodeCreators(prev => ({...prev, [newNode.id]: userData}))
+  //       }
+  //   }
+  // }, [nodes, edges, updateSupabase, borderColor]);
+
+
   const addNode = useCallback(async (position = { x: Math.random() * 400, y: Math.random() * 400 }) => {
     const newNodeId = nodes.length ? Math.max(...nodes.map((node) => parseInt(node.id))) + 1 : 1;
-    const auth = getAuth();
-    const currentUser = auth.currentUser;
+    
+    // Get current user from Supabase
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    console.log("LOAI IS: ", data);
 
     const newNode = {
       id: newNodeId.toString(),
       data: { label: `Node ${newNodeId}` },
       position,
       style: { border: `2px solid ${borderColor}` },
-      creator: currentUser?.uid || "unknown",
+      creator: currentUser?.id || "unknown",  // Changed from uid to id
       creationTimestamp: new Date().toISOString(),
     };
 
@@ -437,16 +520,17 @@ const MapEditor = ({ mapId }) => {
 
     if (currentUser) {
         const { data: userData, error } = await supabase
-          .from('profiles')
+          .from('users') // ex 'profiles'
           .select('*')
-          .eq('id', currentUser.uid)
+          .eq('id', currentUser.id)  // Changed from uid to id
           .single();
 
         if (userData) {
             setNodeCreators(prev => ({...prev, [newNode.id]: userData}))
         }
     }
-  }, [nodes, edges, updateSupabase, borderColor]);
+}, [nodes, edges, updateSupabase, borderColor]);
+
 
   const onNodeDoubleClick = useCallback((event, node) => {
     setNodes((nds) =>
@@ -500,7 +584,7 @@ const MapEditor = ({ mapId }) => {
         for (const creatorId of creatorIds) {
             try {
                 const { data: userData, error } = await supabase
-                  .from('profiles')
+                  .from('users') // ex 'profiles'
                   .select('*')
                   .eq('id', creatorId)
                   .single();
@@ -663,17 +747,17 @@ const renderNode = (node) => {
     };
   }, [mapId]);
 
-  useEffect(() => {
-    const handleMouseMove = (event) => {
-      const bounds = reactFlowWrapper.current.getBoundingClientRect();
-      const x = event.clientX - bounds.left;
-      const y = event.clientY - bounds.top;
-      updateCursor(x, y);
-    };
+  // useEffect(() => {
+  //   const handleMouseMove = (event) => {
+  //     const bounds = reactFlowWrapper.current.getBoundingClientRect();
+  //     const x = event.clientX - bounds.left;
+  //     const y = event.clientY - bounds.top;
+  //     updateCursor(x, y);
+  //   };
 
-    document.addEventListener("mousemove", handleMouseMove);
-    return () => document.removeEventListener("mousemove", handleMouseMove);
-  }, [updateCursor]);
+  //   document.addEventListener("mousemove", handleMouseMove);
+  //   return () => document.removeEventListener("mousemove", handleMouseMove);
+  // }, [updateCursor]);
 
   const predefinedColors = [
     "#FF5733", "#33FF57", "#3357FF", "#FF33A8", "#A833FF", "#33FFF5", "#FFC233",
