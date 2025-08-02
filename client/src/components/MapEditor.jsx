@@ -110,18 +110,43 @@ const MapEditor = ({ mapId }) => {
 
   // Initialize auth when component mounts
   useEffect(() => {
-    // 1. Check current session
+    // OLD checkSession
+    // const checkSession = async () => {
+    //   const { data: { user } } = await supabase.auth.getUser();
+    //   if (user) {
+    //     setCurrentUserId(user.id);
+    //     // Fetch additional user profile if needed
+    //     const { data: profile } = await supabase
+    //       .from('users') // ex 'profiles'
+    //       .select('*')
+    //       .eq('id', user.id)
+    //       .single();
+    //     setUserProfile(profile);
+    //   }
+    // };
+
+
+    // New checkSession
     const checkSession = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setCurrentUserId(user.id);
-        // Fetch additional user profile if needed
-        const { data: profile } = await supabase
-          .from('users') // ex 'profiles'
-          .select('*')
-          .eq('id', user.id)
-          .single();
-        setUserProfile(profile);
+      try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError) throw authError;
+        
+        if (user?.id) {
+          setCurrentUserId(user.id);
+          // Only fetch profile if user exists
+          const { data: profile, error: profileError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+          
+          if (!profileError) {
+            setUserProfile(profile);
+          }
+        }
+      } catch (error) {
+        console.error("Session check error:", error);
       }
     };
 
@@ -618,37 +643,66 @@ const MapEditor = ({ mapId }) => {
   };
 
   useEffect(() => {
+
+    // OLD fetchNodeCreators
+    // const fetchNodeCreators = async () => {
+    //     const creatorIds = [...new Set(nodes.map(n => n.creator).filter(c => c !== "unknown"))];
+
+    //     if (creatorIds.length === 0) {
+    //         return;
+    //     }
+
+    //     const newCreators = {};
+    //     for (const creatorId of creatorIds) {
+    //         try {
+    //             const { data: userData, error } = await supabase
+    //               .from('users') // ex 'profiles'
+    //               .select('*')
+    //               .eq('id', creatorId)
+    //               .single();
+
+    //             if (userData) {
+    //                 newCreators[creatorId] = userData;
+    //             }
+    //         } catch (error) {
+    //             console.error("Error fetching creator data:", error);
+    //         }
+    //     }
+    //     setNodeCreators(prev => {
+    //         const existingCreators = {...prev};
+    //         for (const creatorId in newCreators){
+    //             existingCreators[creatorId] = newCreators[creatorId];
+    //         }
+    //         return existingCreators;
+    //     });
+    // }
+
     const fetchNodeCreators = async () => {
-        const creatorIds = [...new Set(nodes.map(n => n.creator).filter(c => c !== "unknown"))];
+      const creatorIds = [...new Set(nodes.map(n => n.creator).filter(c => c && c !== "unknown"))];
 
-        if (creatorIds.length === 0) {
-            return;
-        }
+      if (creatorIds.length === 0) return;
 
-        const newCreators = {};
-        for (const creatorId of creatorIds) {
-            try {
-                const { data: userData, error } = await supabase
-                  .from('users') // ex 'profiles'
+      const newCreators = {};
+      for (const creatorId of creatorIds) {
+          try {
+              if (!creatorId) continue;
+              
+              const { data: userData, error } = await supabase
+                  .from('users')
                   .select('*')
                   .eq('id', creatorId)
                   .single();
 
-                if (userData) {
-                    newCreators[creatorId] = userData;
-                }
-            } catch (error) {
-                console.error("Error fetching creator data:", error);
-            }
-        }
-        setNodeCreators(prev => {
-            const existingCreators = {...prev};
-            for (const creatorId in newCreators){
-                existingCreators[creatorId] = newCreators[creatorId];
-            }
-            return existingCreators;
-        });
-    }
+              if (!error && userData) {
+                  newCreators[creatorId] = userData;
+              }
+          } catch (error) {
+              console.error("Error fetching creator data:", error);
+          }
+      }
+      setNodeCreators(prev => ({ ...prev, ...newCreators }));
+  };
+
 
     if (nodes.length > 0) {
         fetchNodeCreators();
@@ -1556,7 +1610,8 @@ const renderNode = (node) => {
           )}
         </div>
 
-        <ParticipantBox mapId={mapId} currentUserId={currentUserId} />
+        {/* <ParticipantBox mapId={mapId} currentUserId={currentUserId} /> */}
+        {currentUserId && <ParticipantBox mapId={mapId} currentUserId={currentUserId} />}
       </div>
     </div>
   );
