@@ -818,6 +818,7 @@ const renderNode = (node) => {
           prevMapDataRef.current = mapData;
         }
       }
+      console.log("MAP DATA: ", mapData.name);
     };
 
     fetchMapData();
@@ -1342,7 +1343,8 @@ const renderNode = (node) => {
           <input
             type="text"
             value={mapName}
-            onChange={(e) => setMapName(e.target.value)}
+            readOnly  
+            // onChange={(e) => setMapName(e.target.value)}
             onBlur={() => updateSupabase(nodes, edges)}
             placeholder="Enter Learning Space name"
             style={{

@@ -44,6 +44,30 @@ const Dashboard = ({ user }) => {
 
     fetchUserMaps();
 
+    const fetchUsers = async () => {
+      try {
+        // Supabase equivalent
+        const { data, error } = await supabase
+          .from('users')
+          .select('profile_picture, username, email')
+          .eq('id', user.id) // Assuming 'user' comes from Supabase auth
+          .single(); // Expects exactly one row
+        
+        if (error) throw error;
+        
+        if (data) {
+          setProfilePicture(data.profile_picture || "");
+          setUsername(data.username || "");
+          setEmail(data.email || "");
+        }
+      } catch (error) {
+        setError("Failed to load profile data. Please try again.");
+        console.error("Profile fetch error:", error);
+      }
+    };
+
+    fetchUsers();
+
     // Set up real-time subscription
     const subscription = supabase
       .channel('maps_changes')
@@ -110,7 +134,7 @@ const Dashboard = ({ user }) => {
     try {
       // Check if username exists
       const { data: existingUsers, error: userError } = await supabase
-        .from('profiles')
+        .from('users') // ex 'profiles'
         .select('username')
         .eq('username', username)
         .neq('id', user.id);
@@ -124,7 +148,7 @@ const Dashboard = ({ user }) => {
 
       // Update profile in Supabase
       const { error: updateError } = await supabase
-        .from('profiles')
+        .from('users') // ex 'profiles'
         .update({
           username,
           avatar_url: profilePicture,
@@ -150,31 +174,68 @@ const Dashboard = ({ user }) => {
     }
   };
 
+  // const createNewMap = async (e) => {
+  //   e.preventDefault();
+  //   if (!newMapName.trim()) return;
+  //   try {
+  //     const { data: newMap, error } = await supabase
+  //       .from('maps')
+  //       .insert([{
+  //         name: newMapName,
+  //         nodes: [],
+  //         edges: [],
+  //         user_id: user.id,
+  //         participants: [user.id],
+  //         created_at: new Date().toISOString()
+  //       }])
+  //       .select();
+
+  //     if (error) throw error;
+
+  //     setNewMapName("");
+  //     setSelectedMapId(newMap[0].id);
+  //     setIsCreateInputVisible(false);
+  //   } catch (err) {
+  //     console.error("Error creating map:", err.message);
+  //   }
+  // };
+
   const createNewMap = async (e) => {
     e.preventDefault();
     if (!newMapName.trim()) return;
     try {
+      // First get the current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id) throw new Error("User not authenticated");
+
       const { data: newMap, error } = await supabase
         .from('maps')
-        .insert([{
-          name: newMapName,
+        .insert({
+          name: newMapName.trim(), // Ensure we use the provided name
           nodes: [],
           edges: [],
           user_id: user.id,
           participants: [user.id],
           created_at: new Date().toISOString()
-        }])
-        .select();
+        })
+        .select()
+        .single(); // Use single() to get just one record
+
+      console.log("new map: ", newMap);
 
       if (error) throw error;
 
       setNewMapName("");
-      setSelectedMapId(newMap[0].id);
+      setSelectedMapId(newMap.id);
       setIsCreateInputVisible(false);
+      
+      // Refresh your maps list or navigate to the new map
+      // Example: fetchMaps(); or navigate(`/map/${newMap.id}`);
+      
     } catch (err) {
       console.error("Error creating map:", err.message);
     }
-  };
+};
 
   const handleDeleteClick = (mapId, mapName) => {
     setConfirmDelete({ isVisible: true, mapId, mapName });
@@ -260,7 +321,7 @@ const Dashboard = ({ user }) => {
     try {
       // Update both profiles table and auth metadata
       const { error } = await supabase
-        .from('profiles')
+        .from('users') // ex 'profiles'
         .update({ username: newUsername })
         .eq('id', user.id);
 
