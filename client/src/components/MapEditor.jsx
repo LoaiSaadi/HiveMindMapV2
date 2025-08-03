@@ -14,6 +14,8 @@ import io from "socket.io-client";
 import { data, useNavigate } from "react-router-dom";
 import ParticipantBox from "./ParticipantBox";
 import "../styles/MapEditor.css";
+import { usePresence } from '@supabase/realtime-js';
+
 
 // Initialize Supabase client (only once at the top)
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
@@ -104,9 +106,155 @@ const initialEdges = [
 ];
 
 const MapEditor = ({ mapId }) => {
+
+  
   // State for current user ID
   const [currentUserId, setCurrentUserId] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
+
+  // Inside your MapEditor component, after the state declarations
+const [localCursor, setLocalCursor] = useState({ x: 0, y: 0 });
+const [remoteCursors, setRemoteCursors] = useState({});
+const cursorUpdateInterval = useRef(null);
+const cursorChannel = useRef(null);
+
+// Setup presence channel and cursor tracking
+useEffect(() => {
+  if (!currentUserId || !mapId) return;
+
+  // Initialize presence channel
+  const channel = supabase.channel(`map_cursors:${mapId}`, {
+    config: {
+      presence: {
+        key: currentUserId
+      }
+    }
+  });
+
+  // Subscribe to presence changes
+  channel.on('presence', { event: 'sync' }, () => {
+    const newState = channel.presenceState();
+    setRemoteCursors(newState);
+  });
+
+  channel.subscribe(async (status) => {
+    if (status === 'SUBSCRIBED') {
+      // Initial presence update
+      await channel.track({
+        x: 0,
+        y: 0,
+        userId: currentUserId,
+        username: userProfile?.username || 'Anonymous',
+        lastUpdated: new Date().toISOString()
+      });
+    }
+  });
+
+  cursorChannel.current = channel;
+
+  // Set up cursor position updates every 5 seconds
+  cursorUpdateInterval.current = setInterval(() => {
+    channel.track({
+      x: localCursor.x,
+      y: localCursor.y,
+      userId: currentUserId,
+      username: userProfile?.username || 'Anonymous',
+      lastUpdated: new Date().toISOString()
+    });
+  }, 5000);
+
+  // Add mousemove listener
+  const handleMouseMove = (e) => {
+    if (!reactFlowWrapper.current) return;
+    
+    const bounds = reactFlowWrapper.current.getBoundingClientRect();
+    const x = e.clientX - bounds.left;
+    const y = e.clientY - bounds.top;
+    
+    setLocalCursor({ x, y, userId: currentUserId });
+  };
+
+  document.addEventListener('mousemove', handleMouseMove);
+
+  // Cleanup function
+  return () => {
+    clearInterval(cursorUpdateInterval.current);
+    document.removeEventListener('mousemove', handleMouseMove);
+    if (cursorChannel.current) {
+      supabase.removeChannel(cursorChannel.current);
+    }
+  };
+}, [currentUserId, mapId, userProfile, localCursor]);
+
+// Render cursors
+const renderCursors = useCallback(() => {
+  const allCursors = { ...remoteCursors };
+  
+  // Include local cursor
+  if (currentUserId) {
+    allCursors[currentUserId] = [{
+      ...localCursor,
+      userId: currentUserId,
+      username: userProfile?.username || 'You'
+    }];
+  }
+
+  return Object.entries(allCursors).map(([userId, cursorData]) => {
+    const cursor = cursorData[0];
+    if (!cursor || cursor.x === undefined || cursor.y === undefined) return null;
+    
+    const isCurrentUser = userId === currentUserId;
+    const lastUpdated = cursor.lastUpdated ? new Date(cursor.lastUpdated) : new Date();
+    const isActive = (new Date() - lastUpdated) < 10000; // 10 seconds threshold
+    
+    if (!isActive) return null;
+
+    return (
+      <div
+        key={userId}
+        style={{
+          position: 'absolute',
+          left: cursor.x,
+          top: cursor.y,
+          transform: 'translate(-50%, -50%)',
+          pointerEvents: 'none',
+          zIndex: 1000,
+        }}
+      >
+        <div
+          style={{
+            padding: '4px 8px',
+            background: isCurrentUser ? '#4caf50' : '#2C5F2D',
+            color: 'white',
+            fontWeight: 'bold',
+            fontSize: '12px',
+            borderRadius: '8px',
+            boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)',
+            whiteSpace: 'nowrap',
+            textAlign: 'center',
+            marginBottom: '6px',
+          }}
+        >
+          {cursor.username}
+        </div>
+        <div
+          style={{
+            width: '10px',
+            height: '10px',
+            background: isCurrentUser ? '#4caf50' : '#2C5F2D',
+            borderRadius: '50%',
+          }}
+        />
+      </div>
+    );
+  });
+}, [currentUserId, localCursor, remoteCursors, userProfile]);
+
+
+
+
+
+
 
   // Initialize auth when component mounts
   useEffect(() => {
@@ -974,6 +1122,7 @@ const renderNode = (node) => {
     setSelectedEdge(edge);
     setShowEdgeDetails(true);
   }, []);
+
 
   return (
     <div ref={reactFlowWrapper} style={{ backgroundColor: "#d9fdd3", width: "100%", height: "100vh", position: "relative" }}>
