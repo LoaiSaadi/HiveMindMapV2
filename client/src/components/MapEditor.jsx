@@ -353,94 +353,93 @@ const renderCursors = useCallback(() => {
     window.location.reload();
   };
 
+//   const updateSupabase = useCallback(
+//   async (newNodes, newEdges) => {
+//     try {
+//       const { data: { user } } = await supabase.auth.getUser();
+//       if (!user) throw new Error("User not authenticated");
+
+//       // Get current map data first to preserve existing name if not changed
+//       const { data: currentMap, error: fetchError } = await supabase
+//         .from('maps')
+//         .select('name')
+//         .eq('id', mapId)
+//         .single();
+
+//       if (fetchError) throw fetchError;
+
+//       // Ensure we always have a name value
+//       const updatedName = mapName || currentMap?.name || "Untitled Map";
+
+//       const { error } = await supabase
+//         .from('maps')
+//         .update({
+//           nodes: newNodes,
+//           edges: newEdges,
+//           name: updatedName, // Always include the name
+//           description: mapDescription || "",
+//           last_edited: new Date().toISOString(),
+//           node_notes: nodeNotes,
+//           node_data: nodeData
+//         })
+//         .eq('id', mapId)
+//         .eq('user_id', user.id);
+
+//       if (error) throw error;
+      
+//       console.log("✅ Supabase update successful!");
+//     } catch (error) {
+//       console.error("❌ Supabase update failed:", error);
+//     }
+//   },
+//   [mapId, mapName, mapDescription, nodeNotes, nodeData]
+// );
+
   const updateSupabase = useCallback(
-  async (newNodes, newEdges) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("User not authenticated");
-
-      // Get current map data first to preserve existing name if not changed
-      const { data: currentMap, error: fetchError } = await supabase
-        .from('maps')
-        .select('name')
-        .eq('id', mapId)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      // Ensure we always have a name value
-      const updatedName = mapName || currentMap?.name || "Untitled Map";
-
-      const { error } = await supabase
-        .from('maps')
-        .update({
-          nodes: newNodes,
-          edges: newEdges,
-          name: updatedName, // Always include the name
-          description: mapDescription || "",
-          last_edited: new Date().toISOString(),
-          node_notes: nodeNotes,
-          node_data: nodeData
-        })
-        .eq('id', mapId)
-        .eq('user_id', user.id);
-
-      if (error) throw error;
+    async (newNodes, newEdges) => {
+      console.log("🔥 Attempting to update Supabase...");
       
-      console.log("✅ Supabase update successful!");
-    } catch (error) {
-      console.error("❌ Supabase update failed:", error);
-    }
-  },
-  [mapId, mapName, mapDescription, nodeNotes, nodeData]
-);
-
-  // const updateSupabase = useCallback(
-  //   async (newNodes, newEdges) => {
-  //     console.log("🔥 Attempting to update Supabase...");
-      
-  //     try {
-  //       // Get current user first
-  //       const { data: { user } } = await supabase.auth.getUser();
+      try {
+        // Get current user first
+        const { data: { user } } = await supabase.auth.getUser();
         
-  //       if (!user) throw new Error("User not authenticated");
-  //       const safeMapName = mapName || "Untitled Map";
-  //       console.log("mapNameUpdatSupaBase:", safeMapName);
+        if (!user) throw new Error("User not authenticated");
+        const safeMapName = mapName || "Untitled Map";
 
-  //       const { data, error } = await supabase
-  //         .from('maps')
-  //         .upsert({
-  //           id: mapId,
-  //           user_id: user.id,  // MUST include this for RLS
-  //           nodes: newNodes,
-  //           edges: newEdges,            //name: safeMapName,
-  //           description: mapDescription || "",
-  //           last_edited: new Date(),
-  //           node_notes: nodeNotes,
-  //           node_data: nodeData,
-  //         })
-  //         .eq('id', mapId)
-  //         .eq('user_id', user.id);  // Additional security check
+        const { data, error } = await supabase
+          .from('maps')
+          .upsert({
+            id: mapId,
+            user_id: user.id,  // MUST include this for RLS
+            nodes: newNodes,
+            edges: newEdges,            //name: safeMapName,
+            description: mapDescription || "",
+            last_edited: new Date(),
+            node_notes: nodeNotes,
+            node_data: nodeData,
+          })
+          .eq('id', mapId)
+          .eq('user_id', user.id);  // Additional security check
   
-  //       if (error) {
-  //         console.error("❌ Supabase update failed:", error);
-  //         // Handle specific RLS error
-  //         if (error.code === '42501') {
-  //           console.warn("RLS violation - check user permissions");
-  //         }
-  //       } else {
-  //         console.log("✅ Supabase update successful!", data);
-  //         prevNodesRef.current = newNodes;
-  //         prevEdgesRef.current = newEdges;
-  //         prevNodeNotesRef.current = nodeNotes;
-  //         prevNodeDataRef.current = nodeData;
-  //       }
-  //     } catch (error) {
-  //       console.error("❌ Unexpected error in updateSupabase:", error);
-  //     }
-  //   },
-  //   [mapId, mapName, mapDescription, nodeNotes, nodeData]
-  // );
+        if (error) {
+          console.error("❌ Supabase update failed:", error);
+          // Handle specific RLS error
+          if (error.code === '42501') {
+            console.warn("RLS violation - check user permissions");
+          }
+        } else {
+          console.log("✅ Supabase update successful!", data);
+          prevNodesRef.current = newNodes;
+          prevEdgesRef.current = newEdges;
+          prevNodeNotesRef.current = nodeNotes;
+          prevNodeDataRef.current = nodeData;
+        }
+      } catch (error) {
+        console.error("❌ Unexpected error in updateSupabase:", error);
+      }
+    },
+    [mapId, mapName, mapDescription, nodeNotes, nodeData]
+  );
 
   // const updateCursor = useCallback(async (x, y) => {
   //   try {
