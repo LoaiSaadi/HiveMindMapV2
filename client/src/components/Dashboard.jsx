@@ -44,19 +44,28 @@ const Dashboard = ({ user }) => {
 
     fetchUserMaps();
 
+
     const fetchUsers = async () => {
       try {
-        // Supabase equivalent
+        // 1. Get current logged-in user from Supabase auth
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+        if (userError) throw userError;
+        if (!user) throw new Error("No logged-in user found");
+
+        // 2. Fetch from your custom 'users' table
         const { data, error } = await supabase
           .from('users')
-          .select('profile_picture, username, email')
-          .eq('id', user.id) // Assuming 'user' comes from Supabase auth
-          .single(); // Expects exactly one row
-        
+          .select('username, email')
+          .eq('id', user.id) // 'id' must match the one in your 'users' table
+          .single();
+
         if (error) throw error;
-        
+
+        console.log("Fetched user dataaa:", data);
+        console.log("Fetched user data username and email:", data.username, data.email);
+
         if (data) {
-          setProfilePicture(data.profile_picture || "");
           setUsername(data.username || "");
           setEmail(data.email || "");
         }
@@ -67,6 +76,33 @@ const Dashboard = ({ user }) => {
     };
 
     fetchUsers();
+
+
+    // const fetchUsers = async () => {
+    //   try {
+    //     // Supabase equivalent
+    //     const { data, error } = await supabase
+    //       .from('users')
+    //       .select('username, email')
+    //       .eq('id', user.id) // Assuming 'user' comes from Supabase auth
+    //       .single(); // Expects exactly one row
+
+    //     console.log("Fetched user data:", data);
+        
+    //     if (error) throw error;
+        
+    //     if (data) {
+    //       //setProfilePicture(data.profile_picture || "");
+    //       setUsername(data.username || "");
+    //       setEmail(data.email || "");
+    //     }
+    //   } catch (error) {
+    //     setError("Failed to load profile data. Please try again.");
+    //     console.error("Profile fetch error:", error);
+    //   }
+    // };
+
+    // fetchUsers();
 
     // Set up real-time subscription
     const subscription = supabase
@@ -151,7 +187,7 @@ const Dashboard = ({ user }) => {
         .from('users') // ex 'profiles'
         .update({
           username,
-          avatar_url: profilePicture,
+          //avatar_url: profilePicture,
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id);
@@ -162,7 +198,7 @@ const Dashboard = ({ user }) => {
       const { error: authError } = await supabase.auth.updateUser({
         data: {
           full_name: username,
-          avatar_url: profilePicture
+          //avatar_url: profilePicture
         }
       });
 
@@ -366,7 +402,7 @@ const Dashboard = ({ user }) => {
       <header className="dashboard-header">
         <div className="header-left">
           <div className="user-info">
-            <img src={profilePicture} alt="Profile" className="profile-picture" />
+            {/* <img src={profilePicture} alt="Profile" className="profile-picture" /> */}
             <h2 style={{color:"#2C5F2D" }}>Hi {username || "User"} ;)</h2>
             <button
               className="details-button"
@@ -415,13 +451,13 @@ const Dashboard = ({ user }) => {
                 />
               </div>
               <div className="form-group">
-                <label>Profile Picture:</label>
+                {/* <label>Profile Picture:</label>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={handleFileChange}
                   className="form-input"
-                />
+                /> */}
               </div>
               {error && <p className="error-text">{error}</p>}
             </div>
