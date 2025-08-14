@@ -14,7 +14,7 @@ const LoginPage = ({ onLogin }) => {
   const [username, setUsername] = useState("");
   const [profilePicture, setProfilePicture] = useState(null);
 
-  const defaultProfilePicture = "https://example.com/default-profile-picture.png";
+  // const defaultProfilePicture = "https://example.com/default-profile-picture.png";
 
   useEffect(() => {
     socket.on("map_updated", (data) => {
@@ -94,7 +94,7 @@ const LoginPage = ({ onLogin }) => {
           id: user.id,
           email: user.email,
           username,
-          profile_picture: profilePicture || defaultProfilePicture,
+          // profile_picture: profilePicture || defaultProfilePicture,
           created_at: new Date().toISOString(),
         },
       ]);

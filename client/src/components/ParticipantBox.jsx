@@ -40,7 +40,7 @@ const ParticipantBox = ({ mapId, currentUserId }) => {
       // Fetch user details
       const { data: users, error: usersError } = await supabase
         .from("users")
-        .select("id, username, profile_picture")
+        .select("id, username")
         .in("id", participantIds);
 
       if (usersError) {
@@ -103,7 +103,7 @@ const ParticipantBox = ({ mapId, currentUserId }) => {
                 {user.username || participant.name || "Unknown User"}
                 {participant.id === currentUserId ? " (Me)" : ""}
               </span>
-              <img
+              {/* <img
                 src={user.profile_picture || "/default-profile.png"}
                 alt={`${user.username || "Unknown User"}'s profile`}
                 style={{
@@ -112,7 +112,7 @@ const ParticipantBox = ({ mapId, currentUserId }) => {
                   borderRadius: "50%",
                   objectFit: "cover",
                 }}
-              />
+              /> */}
             </li>
           );
         })}

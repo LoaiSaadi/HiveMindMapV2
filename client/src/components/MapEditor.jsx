@@ -94,164 +94,166 @@ const initialNodes = [
   },
 ];
 
-const initialEdges = [
-  {
-    id: "e1-2",
-    source: "1",
-    target: "2",
-    label: "Default Edge",
-    style: { stroke: "#000000" },
-    markerEnd: null,
-  },
-];
+const initialEdges = [{
+  id: "e1-2",
+  source: "1",
+  target: "2",
+  label: "Default Edge",
+  style: { stroke: "#000000" },
+  markerEnd: {
+    type: "arrowclosed",
+    width: 20,
+    height: 20,
+    color: "#000000"
+  }
+}];
 
 const MapEditor = ({ mapId }) => {
-
   
   // State for current user ID
   const [currentUserId, setCurrentUserId] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
 
-  // Inside your MapEditor component, after the state declarations
-const [localCursor, setLocalCursor] = useState({ x: 0, y: 0 });
-const [remoteCursors, setRemoteCursors] = useState({});
-const cursorUpdateInterval = useRef(null);
-const cursorChannel = useRef(null);
 
-// Setup presence channel and cursor tracking
-useEffect(() => {
-  if (!currentUserId || !mapId) return;
 
-  // Initialize presence channel
-  const channel = supabase.channel(`map_cursors:${mapId}`, {
-    config: {
-      presence: {
-        key: currentUserId
-      }
-    }
-  });
 
-  // Subscribe to presence changes
-  channel.on('presence', { event: 'sync' }, () => {
-    const newState = channel.presenceState();
-    setRemoteCursors(newState);
-  });
+//   // Inside your MapEditor component, after the state declarations
+// const [localCursor, setLocalCursor] = useState({ x: 0, y: 0 });
+// const [remoteCursors, setRemoteCursors] = useState({});
+// const cursorUpdateInterval = useRef(null);
+// const cursorChannel = useRef(null);
 
-  channel.subscribe(async (status) => {
-    if (status === 'SUBSCRIBED') {
-      // Initial presence update
-      await channel.track({
-        x: 0,
-        y: 0,
-        userId: currentUserId,
-        username: userProfile?.username || 'Anonymous',
-        lastUpdated: new Date().toISOString()
-      });
-    }
-  });
+// // Setup presence channel and cursor tracking
+// useEffect(() => {
+//   if (!currentUserId || !mapId) return;
 
-  cursorChannel.current = channel;
+//   // Initialize presence channel
+//   const channel = supabase.channel(`map_cursors:${mapId}`, {
+//     config: {
+//       presence: {
+//         key: currentUserId
+//       }
+//     }
+//   });
 
-  // Set up cursor position updates every 5 seconds
-  cursorUpdateInterval.current = setInterval(() => {
-    channel.track({
-      x: localCursor.x,
-      y: localCursor.y,
-      userId: currentUserId,
-      username: userProfile?.username || 'Anonymous',
-      lastUpdated: new Date().toISOString()
-    });
-  }, 5000);
+//   // Subscribe to presence changes
+//   channel.on('presence', { event: 'sync' }, () => {
+//     const newState = channel.presenceState();
+//     setRemoteCursors(newState);
+//   });
 
-  // Add mousemove listener
-  const handleMouseMove = (e) => {
-    if (!reactFlowWrapper.current) return;
+//   channel.subscribe(async (status) => {
+//     if (status === 'SUBSCRIBED') {
+//       // Initial presence update
+//       await channel.track({
+//         x: 0,
+//         y: 0,
+//         userId: currentUserId,
+//         username: userProfile?.username || 'Anonymous',
+//         lastUpdated: new Date().toISOString()
+//       });
+//     }
+//   });
+
+//   cursorChannel.current = channel;
+
+//   // Set up cursor position updates every 5 seconds
+//   cursorUpdateInterval.current = setInterval(() => {
+//     channel.track({
+//       x: localCursor.x,
+//       y: localCursor.y,
+//       userId: currentUserId,
+//       username: userProfile?.username || 'Anonymous',
+//       lastUpdated: new Date().toISOString()
+//     });
+//   }, 5000);
+
+//   // Add mousemove listener
+//   const handleMouseMove = (e) => {
+//     if (!reactFlowWrapper.current) return;
     
-    const bounds = reactFlowWrapper.current.getBoundingClientRect();
-    const x = e.clientX - bounds.left;
-    const y = e.clientY - bounds.top;
+//     const bounds = reactFlowWrapper.current.getBoundingClientRect();
+//     const x = e.clientX - bounds.left;
+//     const y = e.clientY - bounds.top;
     
-    setLocalCursor({ x, y, userId: currentUserId });
-  };
+//     setLocalCursor({ x, y, userId: currentUserId });
+//   };
 
-  document.addEventListener('mousemove', handleMouseMove);
+//   document.addEventListener('mousemove', handleMouseMove);
 
-  // Cleanup function
-  return () => {
-    clearInterval(cursorUpdateInterval.current);
-    document.removeEventListener('mousemove', handleMouseMove);
-    if (cursorChannel.current) {
-      supabase.removeChannel(cursorChannel.current);
-    }
-  };
-}, [currentUserId, mapId, userProfile, localCursor]);
+//   // Cleanup function
+//   return () => {
+//     clearInterval(cursorUpdateInterval.current);
+//     document.removeEventListener('mousemove', handleMouseMove);
+//     if (cursorChannel.current) {
+//       supabase.removeChannel(cursorChannel.current);
+//     }
+//   };
+// }, [currentUserId, mapId, userProfile, localCursor]);
 
-// Render cursors
-const renderCursors = useCallback(() => {
-  const allCursors = { ...remoteCursors };
+// // Render cursors
+// const renderCursors = useCallback(() => {
+//   const allCursors = { ...remoteCursors };
   
-  // Include local cursor
-  if (currentUserId) {
-    allCursors[currentUserId] = [{
-      ...localCursor,
-      userId: currentUserId,
-      username: userProfile?.username || 'You'
-    }];
-  }
+//   // Include local cursor
+//   if (currentUserId) {
+//     allCursors[currentUserId] = [{
+//       ...localCursor,
+//       userId: currentUserId,
+//       username: userProfile?.username || 'You'
+//     }];
+//   }
 
-  return Object.entries(allCursors).map(([userId, cursorData]) => {
-    const cursor = cursorData[0];
-    if (!cursor || cursor.x === undefined || cursor.y === undefined) return null;
+//   return Object.entries(allCursors).map(([userId, cursorData]) => {
+//     const cursor = cursorData[0];
+//     if (!cursor || cursor.x === undefined || cursor.y === undefined) return null;
     
-    const isCurrentUser = userId === currentUserId;
-    const lastUpdated = cursor.lastUpdated ? new Date(cursor.lastUpdated) : new Date();
-    const isActive = (new Date() - lastUpdated) < 10000; // 10 seconds threshold
+//     const isCurrentUser = userId === currentUserId;
+//     const lastUpdated = cursor.lastUpdated ? new Date(cursor.lastUpdated) : new Date();
+//     const isActive = (new Date() - lastUpdated) < 10000; // 10 seconds threshold
     
-    if (!isActive) return null;
+//     if (!isActive) return null;
 
-    return (
-      <div
-        key={userId}
-        style={{
-          position: 'absolute',
-          left: cursor.x,
-          top: cursor.y,
-          transform: 'translate(-50%, -50%)',
-          pointerEvents: 'none',
-          zIndex: 1000,
-        }}
-      >
-        <div
-          style={{
-            padding: '4px 8px',
-            background: isCurrentUser ? '#4caf50' : '#2C5F2D',
-            color: 'white',
-            fontWeight: 'bold',
-            fontSize: '12px',
-            borderRadius: '8px',
-            boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)',
-            whiteSpace: 'nowrap',
-            textAlign: 'center',
-            marginBottom: '6px',
-          }}
-        >
-          {cursor.username}
-        </div>
-        <div
-          style={{
-            width: '10px',
-            height: '10px',
-            background: isCurrentUser ? '#4caf50' : '#2C5F2D',
-            borderRadius: '50%',
-          }}
-        />
-      </div>
-    );
-  });
-}, [currentUserId, localCursor, remoteCursors, userProfile]);
-
-
-
+//     return (
+//       <div
+//         key={userId}
+//         style={{
+//           position: 'absolute',
+//           left: cursor.x,
+//           top: cursor.y,
+//           transform: 'translate(-50%, -50%)',
+//           pointerEvents: 'none',
+//           zIndex: 1000,
+//         }}
+//       >
+//         <div
+//           style={{
+//             padding: '4px 8px',
+//             background: isCurrentUser ? '#4caf50' : '#2C5F2D',
+//             color: 'white',
+//             fontWeight: 'bold',
+//             fontSize: '12px',
+//             borderRadius: '8px',
+//             boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)',
+//             whiteSpace: 'nowrap',
+//             textAlign: 'center',
+//             marginBottom: '6px',
+//           }}
+//         >
+//           {cursor.username}
+//         </div>
+//         <div
+//           style={{
+//             width: '10px',
+//             height: '10px',
+//             background: isCurrentUser ? '#4caf50' : '#2C5F2D',
+//             borderRadius: '50%',
+//           }}
+//         />
+//       </div>
+//     );
+//   });
+// }, [currentUserId, localCursor, remoteCursors, userProfile]);
 
 
 
@@ -272,6 +274,8 @@ const renderCursors = useCallback(() => {
     //     setUserProfile(profile);
     //   }
     // };
+
+
 
 
     // New checkSession
@@ -333,7 +337,7 @@ const renderCursors = useCallback(() => {
   const [contextMenu, setContextMenu] = useState(null);
   const prevNodeDataRef = useRef(nodeData);
   const noteInputRef = useRef(null);
-  const [cursors, setCursors] = useState({});
+  // const [cursors, setCursors] = useState({});
   const reactFlowWrapper = useRef(null);
   const [disableShortcuts, setDisableShortcuts] = useState(false);
   const [nodeCreators, setNodeCreators] = useState({});
@@ -912,7 +916,7 @@ const renderNode = (node) => {
         display: 'flex',
         alignItems: 'center',
       }}>
-        {creatorInfo?.profile_picture && (
+        {/* {creatorInfo?.profile_picture && (
           <img
             src={creatorInfo.profile_picture}
             alt="Creator Avatar"
@@ -923,7 +927,7 @@ const renderNode = (node) => {
               marginRight: '5px',
             }}
           />
-        )}
+        )} */}
         <span>{creatorUsername}</span> ({creationDate})
       </div>
       {node.data.isEditing ? (
@@ -1022,59 +1026,6 @@ const renderNode = (node) => {
     "#FF3333", "#33FF8E", "#8E33FF", "#FF8E33", "#33A8FF", "#57FF33",
   ];
   
-  useEffect(() => {
-    const fetchCursors = async () => {
-      const { data: cursorsData, error } = await supabase
-        .from('cursors')
-        .select('*')
-        .eq('map_id', mapId);
-
-      if (cursorsData) {
-        const newCursors = {};
-        cursorsData.forEach((cursor, index) => {
-          newCursors[cursor.id] = {
-            ...cursor,
-            color: predefinedColors[index % predefinedColors.length],
-          };
-        });
-        setCursors(newCursors);
-      }
-    };
-
-    fetchCursors();
-
-    // Realtime subscription for cursors
-    const cursorsSubscription = supabase
-      .channel('cursor_changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'cursors',
-        filter: `map_id=eq.${mapId}`
-      }, (payload) => {
-        if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-          setCursors(prev => ({
-            ...prev,
-            [payload.new.id]: {
-              ...payload.new,
-              color: predefinedColors[Object.keys(prev).length % predefinedColors.length]
-            }
-          }));
-        } else if (payload.eventType === 'DELETE') {
-          setCursors(prev => {
-            const newCursors = {...prev};
-            delete newCursors[payload.old.id];
-            return newCursors;
-          });
-        }
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(cursorsSubscription);
-    };
-  }, [mapId]);
-
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (disableShortcuts) return;
@@ -1424,7 +1375,7 @@ const renderNode = (node) => {
           </div>
         )}
 
-        {Object.entries(cursors).map(([id, cursor]) => (
+        {/* {Object.entries(cursors).map(([id, cursor]) => (
           <div
             key={id}
             style={{
@@ -1461,7 +1412,7 @@ const renderNode = (node) => {
               }}
             ></div>
           </div>
-        ))}
+        ))} */}
 
         {contextMenu && (
           <ContextMenu
@@ -1627,7 +1578,7 @@ const renderNode = (node) => {
                 }}
               >
                 <h3 style={{ margin: 0, fontSize: "1.5rem", fontWeight: "bold" }}>Node Details</h3>
-                {nodeCreators[selectedNode.creator]?.profile_picture && (
+                {/* {nodeCreators[selectedNode.creator]?.profile_picture && (
                   <img
                     src={nodeCreators[selectedNode.creator]?.profile_picture}
                     alt="Creator Avatar"
@@ -1639,7 +1590,7 @@ const renderNode = (node) => {
                       boxShadow: "0 4px 6px rgba(0, 0, 0, 0.2)",
                     }}
                   />
-                )}
+                )} */}
                 <p style={{ padding:"10px",  margin: "10px 0 0", fontSize: "1rem", fontWeight: "bold" }}>
                   {nodeCreators[selectedNode.creator]?.username || "Unknown Creator"}
                 </p>
