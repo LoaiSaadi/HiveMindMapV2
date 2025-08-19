@@ -113,3 +113,12 @@
     resize: vertical;
   }
   
+
+.cursor-container {
+  transition: transform 0.1s ease-out;
+  will-change: transform;
+}
+
+.cursor-name {
+  transition: opacity 0.2s ease;
+}

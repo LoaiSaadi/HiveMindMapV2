@@ -117,146 +117,264 @@ const MapEditor = ({ mapId }) => {
 
 
 
-//   // Inside your MapEditor component, after the state declarations
-// const [localCursor, setLocalCursor] = useState({ x: 0, y: 0 });
-// const [remoteCursors, setRemoteCursors] = useState({});
-// const cursorUpdateInterval = useRef(null);
-// const cursorChannel = useRef(null);
 
-// // Setup presence channel and cursor tracking
-// useEffect(() => {
-//   if (!currentUserId || !mapId) return;
 
-//   // Initialize presence channel
-//   const channel = supabase.channel(`map_cursors:${mapId}`, {
-//     config: {
-//       presence: {
-//         key: currentUserId
-//       }
-//     }
-//   });
+  const [localCursor, setLocalCursor] = useState({ x: 0, y: 0 });
+  const [remoteCursors, setRemoteCursors] = useState({});
+  const cursorChannel = useRef(null);
 
-//   // Subscribe to presence changes
-//   channel.on('presence', { event: 'sync' }, () => {
-//     const newState = channel.presenceState();
-//     setRemoteCursors(newState);
-//   });
+  const [viewport, setViewport] = useState({ x: 0, y: 0, zoom: 1 }); // Add this
 
-//   channel.subscribe(async (status) => {
-//     if (status === 'SUBSCRIBED') {
-//       // Initial presence update
-//       await channel.track({
-//         x: 0,
-//         y: 0,
-//         userId: currentUserId,
-//         username: userProfile?.username || 'Anonymous',
-//         lastUpdated: new Date().toISOString()
-//       });
-//     }
-//   });
 
-//   cursorChannel.current = channel;
+// Add these state variables
+const [cursors, setCursors] = useState({});
+const cursorUpdateInterval = useRef(null);
 
-//   // Set up cursor position updates every 5 seconds
-//   cursorUpdateInterval.current = setInterval(() => {
-//     channel.track({
-//       x: localCursor.x,
-//       y: localCursor.y,
-//       userId: currentUserId,
-//       username: userProfile?.username || 'Anonymous',
-//       lastUpdated: new Date().toISOString()
-//     });
-//   }, 5000);
+// Add this effect for cursor updates
+useEffect(() => {
+  if (!currentUserId || !mapId) return;
 
-//   // Add mousemove listener
-//   const handleMouseMove = (e) => {
-//     if (!reactFlowWrapper.current) return;
-    
-//     const bounds = reactFlowWrapper.current.getBoundingClientRect();
-//     const x = e.clientX - bounds.left;
-//     const y = e.clientY - bounds.top;
-    
-//     setLocalCursor({ x, y, userId: currentUserId });
-//   };
-
-//   document.addEventListener('mousemove', handleMouseMove);
-
-//   // Cleanup function
-//   return () => {
-//     clearInterval(cursorUpdateInterval.current);
-//     document.removeEventListener('mousemove', handleMouseMove);
-//     if (cursorChannel.current) {
-//       supabase.removeChannel(cursorChannel.current);
-//     }
-//   };
-// }, [currentUserId, mapId, userProfile, localCursor]);
-
-// // Render cursors
-// const renderCursors = useCallback(() => {
-//   const allCursors = { ...remoteCursors };
+  // Function to update cursor position in database
+  // const updateCursor = async (x, y) => {
+  //   try {
+  //     const { error } = await supabase
+  //       .from('cursors')
+  //       .upsert({
+  //         user_id: currentUserId,
+  //         map_id: mapId,
+  //         x,
+  //         y,
+  //         username: userProfile?.username || 'Anonymous',
+  //         last_updated: new Date().toISOString()
+  //       }, { onConflict: 'user_id,map_id' });
+  //     console.log('Cursor update:', x, y);
+  //     if (error) throw error;
+  //   } catch (error) {
+  //     console.error('Cursor update error:', error);
+  //   }
+  // };
   
-//   // Include local cursor
-//   if (currentUserId) {
-//     allCursors[currentUserId] = [{
-//       ...localCursor,
-//       userId: currentUserId,
-//       username: userProfile?.username || 'You'
-//     }];
-//   }
+  const updateCursor = async (x, y) => {
+    try {
+      const { error } = await supabase
+        .from('cursors')
+        .upsert({
+          user_id: currentUserId,
+          map_id: mapId,
+          x,
+          y,
+          username: userProfile?.username || 'You', // Changed from 'Anonymous'
+          color: '#4CAF50', // Your unique color
+          last_updated: new Date().toISOString()
+        }, { onConflict: 'user_id,map_id' });
 
-//   return Object.entries(allCursors).map(([userId, cursorData]) => {
-//     const cursor = cursorData[0];
-//     if (!cursor || cursor.x === undefined || cursor.y === undefined) return null;
+      console.log('Cursor update:', x, y);
+      if (error) throw error;
+    } catch (error) {
+      console.error('Cursor update error:', error);
+    }
+  };
+
+  // Set up periodic updates every 5 seconds
+  cursorUpdateInterval.current = setInterval(async () => {
+    await updateCursor(localCursor.x, localCursor.y);
+  }, 5000);
+
+  
+  // Track mouse movements
+  const handleMouseMove = (e) => {
+    if (!reactFlowWrapper.current) return;
     
-//     const isCurrentUser = userId === currentUserId;
-//     const lastUpdated = cursor.lastUpdated ? new Date(cursor.lastUpdated) : new Date();
-//     const isActive = (new Date() - lastUpdated) < 10000; // 10 seconds threshold
+    const bounds = reactFlowWrapper.current.getBoundingClientRect();
+    const x = e.clientX - bounds.left;
+    const y = e.clientY - bounds.top;
     
-//     if (!isActive) return null;
+    setLocalCursor({ x, y });
+
+    // Immediate visual update for your own cursor
+    // setCursors(prev => ({
+    //   ...prev,
+    //   [currentUserId]: {
+    //     user_id: currentUserId,
+    //     x,
+    //     y,
+    //     username: userProfile?.username || 'You',
+    //     color: '#4CAF50',
+    //     last_updated: new Date().toISOString()
+    //   }
+    // }));
+  };
+
+  document.addEventListener('mousemove', handleMouseMove);
+
+  // Cleanup
+  return () => {
+    clearInterval(cursorUpdateInterval.current);
+    document.removeEventListener('mousemove', handleMouseMove);
+  };
+}, [currentUserId, mapId, userProfile, localCursor, viewport]);
+
+// Add this effect to fetch and subscribe to cursor changes
+useEffect(() => {
+  if (!mapId) return;
+  console.log("Subscribing to cursor changes for map:", mapId);
+
+  // Initial fetch of cursors
+  const fetchCursors = async () => {
+    const { data, error } = await supabase
+      .from('cursors')
+      .select('*')
+      .eq('map_id', mapId);
+
+    if (!error && data) {
+      const cursorsMap = {};
+      data.forEach(cursor => {
+        cursorsMap[cursor.user_id] = cursor;
+      });
+      setCursors(cursorsMap);
+    }
+  };
+
+  fetchCursors();
+
+  // Subscribe to real-time changes
+  const subscription = supabase
+    .channel('cursor_changes')
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'cursors',
+      filter: `map_id=eq.${mapId}`
+    }, (payload) => {
+      console.log("Cursor change detected:", payload); // Debug log
+      setCursors(prev => {
+        const newCursors = {...prev};
+        if (payload.eventType === 'DELETE') {
+          delete newCursors[payload.old.user_id];
+        } else {
+          newCursors[payload.new.user_id] = payload.new;
+        }
+        console.log("Updated cursors state:", newCursors); // Debug log
+        return newCursors;
+      });
+    })
+    .subscribe((status) => {
+      console.log("Subscription status:", status); // Debug connection status
+    });
+
+  return () => {
+    console.log("Unsubscribing from cursor changes"); // Debug log
+    supabase.removeChannel(subscription);
+  };
+}, [mapId]);
+
+// Add this cursor rendering function
+const renderCursors = () => {
+  if (!reactFlowWrapper.current) return null;
+
+  // Include your own cursor in the rendering
+  const allCursors = {
+    ...cursors,
+    [currentUserId]: {
+      user_id: currentUserId,
+      x: localCursor.x,
+      y: localCursor.y,
+      username: 'You',
+      color: '#4CAF50'
+    }
+  };
+
+  return Object.values(allCursors).map((cursor) => {
+    if (!cursor || cursor.x === undefined || cursor.y === undefined) return null;
+
+    const isYou = cursor.user_id === currentUserId;
+    const color = isYou ? '#4CAF50' : '#2C5F2D';
+
+    return (
+      <div
+        key={cursor.user_id}
+        style={{
+          position: 'absolute',
+          left: `${cursor.x}px`,
+          top: `${cursor.y}px`,
+          transform: 'translate(-50%, -50%)',
+          pointerEvents: 'none',
+          zIndex: 1000,
+        }}
+      >
+        <div style={{
+          padding: '4px 8px',
+          background: color,
+          color: 'white',
+          borderRadius: '4px',
+          fontSize: '12px',
+          whiteSpace: 'nowrap',
+        }}>
+          {isYou ? 'You' : cursor.username || 'Anonymous'}
+        </div>
+        <div style={{
+          width: '12px',
+          height: '12px',
+          background: color,
+          borderRadius: '50%',
+          border: isYou ? '2px solid white' : 'none',
+          margin: '0 auto',
+        }} />
+      </div>
+    );
+  });
+};
+
+// const renderCursors = () => {
+//   if (!reactFlowWrapper.current) return null;
+
+//   // Get the ReactFlow viewport bounds
+//   const flowBounds = reactFlowWrapper.current.getBoundingClientRect();
+
+//   return Object.values(cursors).map((cursor) => {
+//     // Skip if cursor is outside visible area
+//     if (cursor.x < 0 || cursor.y < 0 || 
+//         cursor.x > flowBounds.width || cursor.y > flowBounds.height) {
+//       return null;
+//     }
+
+//     const isYou = cursor.user_id === currentUserId;
+//     const color = isYou ? '#4CAF50' : '#2C5F2D';
 
 //     return (
 //       <div
-//         key={userId}
+//         key={cursor.user_id}
 //         style={{
 //           position: 'absolute',
-//           left: cursor.x,
-//           top: cursor.y,
+//           left: `${cursor.x}px`,
+//           top: `${cursor.y}px`,
 //           transform: 'translate(-50%, -50%)',
 //           pointerEvents: 'none',
 //           zIndex: 1000,
 //         }}
 //       >
-//         <div
-//           style={{
-//             padding: '4px 8px',
-//             background: isCurrentUser ? '#4caf50' : '#2C5F2D',
-//             color: 'white',
-//             fontWeight: 'bold',
-//             fontSize: '12px',
-//             borderRadius: '8px',
-//             boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)',
-//             whiteSpace: 'nowrap',
-//             textAlign: 'center',
-//             marginBottom: '6px',
-//           }}
-//         >
-//           {cursor.username}
+//         <div style={{
+//           padding: '4px 8px',
+//           background: color,
+//           color: 'white',
+//           borderRadius: '4px',
+//           fontSize: '12px',
+//           whiteSpace: 'nowrap',
+//         }}>
+//           {isYou ? 'You' : cursor.username || 'Anonymous'}
 //         </div>
-//         <div
-//           style={{
-//             width: '10px',
-//             height: '10px',
-//             background: isCurrentUser ? '#4caf50' : '#2C5F2D',
-//             borderRadius: '50%',
-//           }}
-//         />
+//         <div style={{
+//           width: '12px',
+//           height: '12px',
+//           background: color,
+//           borderRadius: '50%',
+//           border: isYou ? '2px solid white' : 'none',
+//           margin: '0 auto',
+//         }} />
 //       </div>
 //     );
 //   });
-// }, [currentUserId, localCursor, remoteCursors, userProfile]);
-
-
-
+// };
 
   // Initialize auth when component mounts
   useEffect(() => {
@@ -283,6 +401,8 @@ const MapEditor = ({ mapId }) => {
       try {
         const { data: { user }, error: authError } = await supabase.auth.getUser();
         if (authError) throw authError;
+
+        console.log("Current user:", user);
         
         if (user?.id) {
           setCurrentUserId(user.id);
@@ -296,7 +416,9 @@ const MapEditor = ({ mapId }) => {
           if (!profileError) {
             setUserProfile(profile);
           }
+          console.log("User profile:", profile);
         }
+        
       } catch (error) {
         console.error("Session check error:", error);
       }
@@ -308,7 +430,9 @@ const MapEditor = ({ mapId }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         setCurrentUserId(session.user.id);
+        console.log("Current user:", session.user);
       } else {
+        console.log("User logged out or session expired");
         setCurrentUserId(null);
         setUserProfile(null);
       }
@@ -1086,7 +1210,7 @@ const renderNode = (node) => {
 
 
   return (
-    <div ref={reactFlowWrapper} style={{ backgroundColor: "#d9fdd3", width: "100%", height: "100vh", position: "relative" }}>
+    <div ref={reactFlowWrapper} style={{ backgroundColor: "#d9fdd3", width: "100%", height: "100vh", position: "relative", overflow: "hidden" }}>
       <div style={{ width: "80%", height: "100%" }}>
         <Panel position="top-left">
           <div className="description" style={{ padding: '2px', background:"linear-gradient(to bottom, #4caf50, #81c784)",color: "#ffffff", boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)", borderRadius: '4px',height:"60%" }}>
@@ -1128,6 +1252,9 @@ const renderNode = (node) => {
           selectNodesOnDrag
           fitView
         />
+ 
+        {renderCursors()}
+
 
         {showEdgeDetails && selectedEdge && (
           <div
