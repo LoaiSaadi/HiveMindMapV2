@@ -121,10 +121,8 @@ const MapEditor = ({ mapId }) => {
 
   const [localCursor, setLocalCursor] = useState({ x: 0, y: 0 });
   const [remoteCursors, setRemoteCursors] = useState({});
-  const cursorChannel = useRef(null);
-
-  const [viewport, setViewport] = useState({ x: 0, y: 0, zoom: 1 }); // Add this
-
+  
+const [displayedCursors, setDisplayedCursors] = useState({}); // NEW: For displayed positions
 
 // Add these state variables
 const [cursors, setCursors] = useState({});
@@ -175,10 +173,30 @@ useEffect(() => {
     }
   };
 
+
   // Set up periodic updates every 5 seconds
   cursorUpdateInterval.current = setInterval(async () => {
+    // Update database
     await updateCursor(localCursor.x, localCursor.y);
+    
+    // Update displayed position (only every 5 seconds)
+    setDisplayedCursors(prev => ({
+      ...prev,
+      [currentUserId]: {
+        ...localCursor,
+        user_id: currentUserId,
+        username: 'You',
+        color: '#4CAF50'
+      }
+    }));
   }, 5000);
+
+
+
+  // // Set up periodic updates every 5 seconds
+  // cursorUpdateInterval.current = setInterval(async () => {
+  //   await updateCursor(localCursor.x, localCursor.y);
+  // }, 5000);
 
   
   // Track mouse movements
@@ -212,7 +230,7 @@ useEffect(() => {
     clearInterval(cursorUpdateInterval.current);
     document.removeEventListener('mousemove', handleMouseMove);
   };
-}, [currentUserId, mapId, userProfile, localCursor, viewport]);
+}, [currentUserId, mapId, userProfile, localCursor]);
 
 // Add this effect to fetch and subscribe to cursor changes
 useEffect(() => {
@@ -232,6 +250,8 @@ useEffect(() => {
         cursorsMap[cursor.user_id] = cursor;
       });
       setCursors(cursorsMap);
+      setRemoteCursors(cursorsMap);
+      setDisplayedCursors(cursorsMap); // Set initial display positions
     }
   };
 
@@ -269,22 +289,68 @@ useEffect(() => {
 }, [mapId]);
 
 // Add this cursor rendering function
+// const renderCursors = () => {
+//   if (!reactFlowWrapper.current) return null;
+
+//   // Include your own cursor in the rendering
+//   const allCursors = {
+//     ...cursors,
+//     [currentUserId]: {
+//       user_id: currentUserId,
+//       x: localCursor.x,
+//       y: localCursor.y,
+//       username: 'You',
+//       color: '#4CAF50'
+//     }
+//   };
+
+//   return Object.values(allCursors).map((cursor) => {
+//     if (!cursor || cursor.x === undefined || cursor.y === undefined) return null;
+
+//     const isYou = cursor.user_id === currentUserId;
+//     const color = isYou ? '#4CAF50' : '#2C5F2D';
+
+//     return (
+//       <div
+//         key={cursor.user_id}
+//         style={{
+//           position: 'absolute',
+//           left: `${cursor.x}px`,
+//           top: `${cursor.y}px`,
+//           transform: 'translate(-50%, -50%)',
+//           pointerEvents: 'none',
+//           zIndex: 1000,
+//         }}
+//       >
+//         <div style={{
+//           padding: '4px 8px',
+//           background: color,
+//           color: 'white',
+//           borderRadius: '4px',
+//           fontSize: '12px',
+//           whiteSpace: 'nowrap',
+//         }}>
+//           {isYou ? 'You' : cursor.username || 'Anonymous'}
+//         </div>
+//         <div style={{
+//           width: '12px',
+//           height: '12px',
+//           background: color,
+//           borderRadius: '50%',
+//           border: isYou ? '2px solid white' : 'none',
+//           margin: '0 auto',
+//         }} />
+//       </div>
+//     );
+//   });
+// };
+
+
+
 const renderCursors = () => {
   if (!reactFlowWrapper.current) return null;
 
-  // Include your own cursor in the rendering
-  const allCursors = {
-    ...cursors,
-    [currentUserId]: {
-      user_id: currentUserId,
-      x: localCursor.x,
-      y: localCursor.y,
-      username: 'You',
-      color: '#4CAF50'
-    }
-  };
-
-  return Object.values(allCursors).map((cursor) => {
+  return Object.values(displayedCursors).map((cursor) => {
     if (!cursor || cursor.x === undefined || cursor.y === undefined) return null;
 
     const isYou = cursor.user_id === currentUserId;
@@ -325,56 +391,7 @@ const renderCursors = () => {
   });
 };
 
-// const renderCursors = () => {
-//   if (!reactFlowWrapper.current) return null;
 
-//   // Get the ReactFlow viewport bounds
-//   const flowBounds = reactFlowWrapper.current.getBoundingClientRect();
-
-//   return Object.values(cursors).map((cursor) => {
-//     // Skip if cursor is outside visible area
-//     if (cursor.x < 0 || cursor.y < 0 || 
-//         cursor.x > flowBounds.width || cursor.y > flowBounds.height) {
-//       return null;
-//     }
-
-//     const isYou = cursor.user_id === currentUserId;
-//     const color = isYou ? '#4CAF50' : '#2C5F2D';
-
-//     return (
-//       <div
-//         key={cursor.user_id}
-//         style={{
-//           position: 'absolute',
-//           left: `${cursor.x}px`,
-//           top: `${cursor.y}px`,
-//           transform: 'translate(-50%, -50%)',
-//           pointerEvents: 'none',
-//           zIndex: 1000,
-//         }}
-//       >
-//         <div style={{
-//           padding: '4px 8px',
-//           background: color,
-//           color: 'white',
-//           borderRadius: '4px',
-//           fontSize: '12px',
-//           whiteSpace: 'nowrap',
-//         }}>
-//           {isYou ? 'You' : cursor.username || 'Anonymous'}
-//         </div>
-//         <div style={{
-//           width: '12px',
-//           height: '12px',
-//           background: color,
-//           borderRadius: '50%',
-//           border: isYou ? '2px solid white' : 'none',
-//           margin: '0 auto',
-//         }} />
-//       </div>
-//     );
-//   });
-// };
 
   // Initialize auth when component mounts
   useEffect(() => {
