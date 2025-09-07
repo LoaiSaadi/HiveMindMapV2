@@ -23,7 +23,6 @@ router.get("/profile", verifyUser, async (req, res) => {
 
 module.exports = router;
 
-
 // const express = require("express");
 // const { auth } = require("../config/firebaseConfig");
 
