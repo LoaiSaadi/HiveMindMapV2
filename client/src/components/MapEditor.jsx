@@ -116,9 +116,6 @@ const MapEditor = ({ mapId }) => {
 
 
 
-
-
-
   const [localCursor, setLocalCursor] = useState({ x: 0, y: 0 });
   const [remoteCursors, setRemoteCursors] = useState({});
   
