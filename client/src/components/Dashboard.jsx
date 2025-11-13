@@ -298,58 +298,120 @@ const Dashboard = ({ user }) => {
     setConfirmDelete({ isVisible: false, mapId: null, mapName: "" });
   };
 
-  const joinMap = async (e) => {
-    e.preventDefault();
-    setJoinSuccessMessage("");
-    setError("");
 
-    if (!joinMapName.trim() || !joinMapId.trim()) {
-      setError("Please provide both the map name and ID.");
+
+const joinMap = async (e) => {
+  e.preventDefault();
+  setJoinSuccessMessage("");
+  setError("");
+
+  const name = joinMapName.trim();
+  const id = joinMapId.trim(); // <- always use trimmed value
+
+  if (!name || !id) {
+    setError("Please provide both the map name and ID.");
+    return;
+  }
+
+  try {
+    // (optional) check logged-in user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    console.log("joinMap – current user:", user);
+    if (userError || !user) {
+      console.error("joinMap – auth error:", userError);
+      setError("You must be logged in to join a map.");
       return;
     }
 
-    try {
-      // Get the map
-      const { data: mapData, error: mapError } = await supabase
-        .from('maps')
-        .select('*')
-        .eq('id', joinMapId)
-        .single();
+    console.log("joinMap – searching map with id:", id, "length:", id.length);
 
-      if (mapError) throw mapError;
-      if (!mapData) {
-        setError("No map found with the provided ID.");
-        return;
-      }
+    // use maybeSingle so "no rows" doesn't throw an error
+    const { data: mapData, error: mapError } = await supabase
+      .from("maps")
+      .select("id, name")
+      .eq("id", id)
+      .maybeSingle();
 
-      if (mapData.name !== joinMapName) {
-        setError("The map name does not match the provided ID.");
-        return;
-      }
+    console.log("joinMap – mapData:", mapData);
+    console.log("joinMap – mapError:", mapError);
 
-      if (mapData.participants && mapData.participants.includes(user.id)) {
-        setJoinSuccessMessage("You have already joined this map.");
-        return;
-      }
-
-      // Update the map to add the user as a participant
-      const { error: updateError } = await supabase
-        .from('maps')
-        .update({
-          participants: [...mapData.participants, user.id]
-        })
-        .eq('id', joinMapId);
-
-      if (updateError) throw updateError;
-
-      setJoinSuccessMessage("You have successfully joined the map.");
-      setJoinMapName("");
-      setJoinMapId("");
-    } catch (err) {
-      console.error("Error joining map:", err.message);
-      setError("An error occurred while trying to join the map. Please try again.");
+    // if there was any error or no row returned
+    if (mapError || !mapData) {
+      setError("No map found with the provided ID.");
+      return;
     }
-  };
+
+    if (mapData.name !== name) {
+      setError("The map name does not match the provided ID.");
+      return;
+    }
+
+    // ✅ success – just open the map (no RLS change, no participants update)
+    setJoinSuccessMessage("Opening map…");
+    setJoinMapName("");
+    setJoinMapId("");
+
+    // adjust this path to your router
+    navigate(`/map/${mapData.id}`);
+  } catch (err) {
+    console.error("joinMap – unexpected error:", err);
+    setError("An unexpected error occurred while trying to join the map.");
+  }
+};
+
+
+  // const joinMap = async (e) => {
+  //   e.preventDefault();
+  //   setJoinSuccessMessage("");
+  //   setError("");
+
+  //   if (!joinMapName.trim() || !joinMapId.trim()) {
+  //     setError("Please provide both the map name and ID.");
+  //     return;
+  //   }
+
+  //   try {
+  //     // Get the map
+  //     const { data: mapData, error: mapError } = await supabase
+  //       .from('maps')
+  //       .select('*')
+  //       .eq('id', joinMapId)
+  //       .single();
+
+  //     if (mapError) throw mapError;
+  //     if (!mapData) {
+  //       setError("No map found with the provided ID.");
+  //       return;
+  //     }
+
+  //     if (mapData.name !== joinMapName) {
+  //       setError("The map name does not match the provided ID.");
+  //       return;
+  //     }
+
+  //     if (mapData.participants && mapData.participants.includes(user.id)) {
+  //       setJoinSuccessMessage("You have already joined this map.");
+  //       return;
+  //     }
+
+  //     // Update the map to add the user as a participant
+  //     const { error: updateError } = await supabase
+  //       .from('maps')
+  //       .update({
+  //         participants: [...mapData.participants, user.id]
+  //       })
+  //       .eq('id', joinMapId);
+
+  //     if (updateError) throw updateError;
+
+  //     setJoinSuccessMessage("You have successfully joined the map.");
+  //     setJoinMapName("");
+  //     setJoinMapId("");
+  //   } catch (err) {
+  //     console.error("Error joining map:", err.message);
+  //     setError("An error occurred while trying to join the map. Please try again.");
+  //   }
+  // };
 
   const handleUsernameChange = async (e) => {
     const newUsername = e.target.value;
