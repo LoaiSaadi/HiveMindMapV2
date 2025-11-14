@@ -28,14 +28,28 @@ const socket = io("http://localhost:5000");
 const parseJSONField = (value, fallback) => {
   if (value == null) return fallback;
   if (Array.isArray(value) || typeof value === "object") return value;
+
   if (typeof value === "string") {
     try {
-      return JSON.parse(value);
+      let parsed = JSON.parse(value);
+
+      // handle double-encoded JSON like "\"[{...}]\""
+      if (typeof parsed === "string") {
+        try {
+          parsed = JSON.parse(parsed);
+        } catch {
+          // ignore inner failure
+        }
+      }
+
+      if (Array.isArray(parsed) || typeof parsed === "object") return parsed;
+      return fallback;
     } catch (e) {
       console.error("Failed to parse JSON field:", value, e);
       return fallback;
     }
   }
+
   return fallback;
 };
 
@@ -120,21 +134,7 @@ const initialNodes = [
   },
 ];
 
-const initialEdges = [
-  {
-    id: "e1-2",
-    source: "1",
-    target: "2",
-    label: "Default Edge",
-    style: { stroke: "#000000" },
-    markerEnd: {
-      type: "arrowclosed",
-      width: 20,
-      height: 20,
-      color: "#000000",
-    },
-  },
-];
+const initialEdges = [];
 
 // ================== MapEditor ==================
 
@@ -142,12 +142,12 @@ const MapEditor = ({ mapId }) => {
   // -------- Auth & user --------
   const [currentUserId, setCurrentUserId] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
+  const [authUser, setAuthUser] = useState(null);
+  const [participants, setParticipants] = useState([]);
 
-  // -------- Cursors --------
-  const [localCursor, setLocalCursor] = useState({ x: 0, y: 0 });
-  const [remoteCursors, setRemoteCursors] = useState({});
-  const [displayedCursors, setDisplayedCursors] = useState({});
+  // -------- Cursors (single source of truth) --------
   const [cursors, setCursors] = useState({});
+  const localCursorRef = useRef({ x: 0, y: 0 });
   const cursorUpdateInterval = useRef(null);
 
   // -------- React Flow --------
@@ -201,6 +201,7 @@ const MapEditor = ({ mapId }) => {
 
         if (user?.id) {
           setCurrentUserId(user.id);
+          setAuthUser(user);
 
           const { data: profile, error: profileError } = await supabase
             .from("users")
@@ -224,9 +225,11 @@ const MapEditor = ({ mapId }) => {
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         setCurrentUserId(session.user.id);
+        setAuthUser(session.user);
       } else {
         setCurrentUserId(null);
         setUserProfile(null);
+        setAuthUser(null);
       }
     });
 
@@ -281,13 +284,19 @@ const MapEditor = ({ mapId }) => {
 
     const updateCursor = async (x, y) => {
       try {
+        const username =
+          userProfile?.username ||
+          authUser?.email ||
+          authUser?.id ||
+          "";
+
         const { error } = await supabase.from("cursors").upsert(
           {
             user_id: currentUserId,
             map_id: mapId,
             x,
             y,
-            username: userProfile?.username || "You",
+            username,
             color: "#4CAF50",
             last_updated: new Date().toISOString(),
           },
@@ -295,6 +304,20 @@ const MapEditor = ({ mapId }) => {
         );
 
         if (error) throw error;
+
+        // Update own cursor locally immediately
+        setCursors((prev) => ({
+          ...prev,
+          [currentUserId]: {
+            ...(prev[currentUserId] || {}),
+            user_id: currentUserId,
+            map_id: mapId,
+            x,
+            y,
+            username,
+            color: "#4CAF50",
+          },
+        }));
       } catch (error) {
         console.error("Cursor update error:", error);
       }
@@ -305,30 +328,22 @@ const MapEditor = ({ mapId }) => {
       const bounds = reactFlowWrapper.current.getBoundingClientRect();
       const x = e.clientX - bounds.left;
       const y = e.clientY - bounds.top;
-      setLocalCursor({ x, y });
+      localCursorRef.current = { x, y };
     };
 
     document.addEventListener("mousemove", handleMouseMove);
 
+    // Single interval that always uses latest ref
     cursorUpdateInterval.current = setInterval(async () => {
-      await updateCursor(localCursor.x, localCursor.y);
-
-      setDisplayedCursors((prev) => ({
-        ...prev,
-        [currentUserId]: {
-          ...localCursor,
-          user_id: currentUserId,
-          username: "You",
-          color: "#4CAF50",
-        },
-      }));
-    }, 2000);
+      const { x, y } = localCursorRef.current;
+      await updateCursor(x, y);
+    }, 800); // smooth-ish update
 
     return () => {
       clearInterval(cursorUpdateInterval.current);
       document.removeEventListener("mousemove", handleMouseMove);
     };
-  }, [currentUserId, mapId, userProfile, localCursor]);
+  }, [currentUserId, mapId, userProfile, authUser]);
 
   useEffect(() => {
     if (!mapId) return;
@@ -345,8 +360,6 @@ const MapEditor = ({ mapId }) => {
           cursorsMap[cursor.user_id] = cursor;
         });
         setCursors(cursorsMap);
-        setRemoteCursors(cursorsMap);
-        setDisplayedCursors(cursorsMap);
       }
     };
 
@@ -384,7 +397,7 @@ const MapEditor = ({ mapId }) => {
   const renderCursors = () => {
     if (!reactFlowWrapper.current) return null;
 
-    return Object.values(displayedCursors).map((cursor) => {
+    return Object.values(cursors).map((cursor) => {
       if (!cursor || cursor.x === undefined || cursor.y === undefined) return null;
 
       const isYou = cursor.user_id === currentUserId;
@@ -412,7 +425,8 @@ const MapEditor = ({ mapId }) => {
               whiteSpace: "nowrap",
             }}
           >
-            {isYou ? "You" : cursor.username || "Anonymous"}
+            {/* REAL USERNAME ONLY */}
+            {cursor.username || cursor.user_id}
           </div>
           <div
             style={{
@@ -868,6 +882,11 @@ const MapEditor = ({ mapId }) => {
         const parsedEdges = parseJSONField(mapData.edges, []);
         const parsedNotes = parseJSONField(mapData.node_notes, {});
         const parsedData = parseJSONField(mapData.node_data, {});
+        const mapParticipants = Array.isArray(mapData.participants)
+          ? mapData.participants
+          : [];
+
+        setParticipants(mapParticipants);
 
         if (
           !prevMapDataRef.current ||
@@ -919,6 +938,9 @@ const MapEditor = ({ mapId }) => {
           const parsedEdges = parseJSONField(raw.edges, []);
           const parsedNotes = parseJSONField(raw.node_notes, {});
           const parsedData = parseJSONField(raw.node_data, {});
+          const mapParticipants = Array.isArray(raw.participants)
+            ? raw.participants
+            : [];
 
           setNodes(parsedNodes || []);
           setEdges(parsedEdges || []);
@@ -926,6 +948,7 @@ const MapEditor = ({ mapId }) => {
           setMapDescription(raw.description || "");
           setNodeNotes(parsedNotes || {});
           setNodeData(parsedData || {});
+          setParticipants(mapParticipants);
         }
       )
       .subscribe();
@@ -934,6 +957,59 @@ const MapEditor = ({ mapId }) => {
       supabase.removeChannel(subscription);
     };
   }, [mapId]);
+
+  // ================== Ensure current user is in participants ==================
+
+  useEffect(() => {
+    if (!mapId || !currentUserId) return;
+
+    const ensureParticipant = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("maps")
+          .select("participants")
+          .eq("id", mapId)
+          .single();
+
+        if (error) {
+          console.error("Failed to load participants:", error);
+          return;
+        }
+
+        let existing = [];
+        if (Array.isArray(data.participants)) {
+          existing = data.participants;
+        } else if (typeof data.participants === "string") {
+          try {
+            existing = JSON.parse(data.participants);
+          } catch {
+            existing = [];
+          }
+        }
+
+        if (!existing.includes(currentUserId)) {
+          const updated = [...existing, currentUserId];
+          const { error: updateError } = await supabase
+            .from("maps")
+            .update({ participants: updated })
+            .eq("id", mapId);
+
+          if (updateError) {
+            console.error("Failed to update participants:", updateError);
+            return;
+          }
+
+          setParticipants(updated);
+        } else {
+          setParticipants(existing);
+        }
+      } catch (err) {
+        console.error("Unexpected error ensuring participant:", err);
+      }
+    };
+
+    ensureParticipant();
+  }, [mapId, currentUserId]);
 
   // ================== Keyboard shortcuts ==================
 
@@ -1771,3 +1847,4 @@ const MapEditorWithParams = ({ mapId }) => (
 );
 
 export default MapEditorWithParams;
+  
