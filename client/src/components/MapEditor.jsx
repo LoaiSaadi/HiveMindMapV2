@@ -1,55 +1,65 @@
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, {
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
 import ReactFlow, {
   addEdge,
   applyNodeChanges,
   applyEdgeChanges,
   ReactFlowProvider,
-  useEdgesState,
-  useNodesState,
   Panel,
+  useNodesState,
+  useEdgesState,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { createClient } from "@supabase/supabase-js";
 import io from "socket.io-client";
-import { useNavigate } from "react-router-dom";
-import ParticipantBox from "./ParticipantBox";
 import "../styles/MapEditor.css";
+import ParticipantList from "./ParticipantList";
+import ParticipantBox from "./ParticipantBox";
 
-// ================== Supabase & Socket ==================
+// ================== Supabase & Socket init ==================
 
-const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
-const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const SUPABASE_URL =
+  (typeof import.meta !== "undefined" &&
+    import.meta.env &&
+    import.meta.env.VITE_SUPABASE_URL) ||
+  process.env.REACT_APP_SUPABASE_URL;
 
-const socket = io("http://localhost:5000");
+const SUPABASE_ANON_KEY =
+  (typeof import.meta !== "undefined" &&
+    import.meta.env &&
+    import.meta.env.VITE_SUPABASE_ANON_KEY) ||
+  process.env.REACT_APP_SUPABASE_ANON_KEY;
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const SOCKET_URL =
+  (typeof import.meta !== "undefined" &&
+    import.meta.env &&
+    import.meta.env.VITE_SOCKET_URL) ||
+  process.env.REACT_APP_SOCKET_URL ||
+  "http://localhost:5000";
+
+const socket = io(SOCKET_URL, {
+  autoConnect: true,
+});
 
 // ================== Helpers ==================
 
 const parseJSONField = (value, fallback) => {
   if (value == null) return fallback;
   if (Array.isArray(value) || typeof value === "object") return value;
-
   if (typeof value === "string") {
     try {
-      let parsed = JSON.parse(value);
-
-      // handle double-encoded JSON like "\"[{...}]\""
-      if (typeof parsed === "string") {
-        try {
-          parsed = JSON.parse(parsed);
-        } catch {
-          // ignore inner failure
-        }
-      }
-
-      if (Array.isArray(parsed) || typeof parsed === "object") return parsed;
-      return fallback;
+      return JSON.parse(value);
     } catch (e) {
       console.error("Failed to parse JSON field:", value, e);
       return fallback;
     }
   }
-
   return fallback;
 };
 
@@ -125,15 +135,7 @@ const ContextMenu = ({ onClick, onClose, position, onRename }) => {
 
 // ================== Initial Data ==================
 
-const initialNodes = [
-  {
-    id: "1",
-    data: { label: "Node 1" },
-    position: { x: 250, y: 5 },
-    style: { border: "2px solid #000000" },
-  },
-];
-
+const initialNodes = [];
 const initialEdges = [];
 
 // ================== MapEditor ==================
@@ -142,19 +144,15 @@ const MapEditor = ({ mapId }) => {
   // -------- Auth & user --------
   const [currentUserId, setCurrentUserId] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
-  const [authUser, setAuthUser] = useState(null);
-  const [participants, setParticipants] = useState([]);
 
-  // -------- Cursors (single source of truth) --------
-  const [cursors, setCursors] = useState({});
-  const localCursorRef = useRef({ x: 0, y: 0 });
-  const cursorUpdateInterval = useRef(null);
+  // -------- Cursors (socket-only) --------
+  const [cursors, setCursors] = useState({}); // { userId: { x, y, username, color } }
 
   // -------- React Flow --------
   const [nodes, setNodes] = useNodesState(initialNodes);
   const [edges, setEdges] = useEdgesState(initialEdges);
 
-  const [nodeId, setNodeId] = useState(2);
+  const [nodeId, setNodeId] = useState(1);
   const [mapName, setMapName] = useState("");
   const [mapDescription, setMapDescription] = useState("");
   const [selectedElements, setSelectedElements] = useState([]);
@@ -162,7 +160,6 @@ const MapEditor = ({ mapId }) => {
   const [lastEdited, setLastEdited] = useState("");
   const [selectedNode, setSelectedNode] = useState(null);
   const [borderColor, setBorderColor] = useState("#000000");
-  const [textColor, setTextColor] = useState("#000000");
   const [nodeNotes, setNodeNotes] = useState({});
   const prevNodeNotesRef = useRef(nodeNotes);
   const [nodeData, setNodeData] = useState({});
@@ -177,13 +174,10 @@ const MapEditor = ({ mapId }) => {
   const [selectedEdge, setSelectedEdge] = useState(null);
   const [showEdgeDetails, setShowEdgeDetails] = useState(false);
   const edgeDetailsPanelRef = useRef(null);
-  const [edgeLabel, setEdgeLabel] = useState("");
 
   const prevNodesRef = useRef(nodes);
   const prevEdgesRef = useRef(edges);
   const prevMapDataRef = useRef(null);
-
-  const navigate = useNavigate();
 
   const refreshPage = () => {
     window.location.reload();
@@ -201,7 +195,6 @@ const MapEditor = ({ mapId }) => {
 
         if (user?.id) {
           setCurrentUserId(user.id);
-          setAuthUser(user);
 
           const { data: profile, error: profileError } = await supabase
             .from("users")
@@ -225,11 +218,9 @@ const MapEditor = ({ mapId }) => {
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         setCurrentUserId(session.user.id);
-        setAuthUser(session.user);
       } else {
         setCurrentUserId(null);
         setUserProfile(null);
-        setAuthUser(null);
       }
     });
 
@@ -238,16 +229,33 @@ const MapEditor = ({ mapId }) => {
     };
   }, []);
 
-  // ================== Supabase UPDATE ==================
+  // ================== join-map over socket ==================
+  useEffect(() => {
+    if (!currentUserId || !mapId || !userProfile) return;
+
+    const username =
+      userProfile.username ||
+      userProfile.full_name ||
+      userProfile.email ||
+      "Anonymous";
+
+    const payload = {
+      mapId,
+      userId: currentUserId,
+      username,
+    };
+
+    console.log("join-map sent:", payload);
+    socket.emit("join-map", payload);
+  }, [currentUserId, mapId, userProfile]);
+
+  // ================== Supabase UPDATE + socket broadcast ==================
 
   const updateSupabase = useCallback(
     async (newNodes, newEdges) => {
       if (!mapId) return;
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) throw new Error("User not authenticated");
+        const updatedAt = new Date().toISOString();
 
         const { error } = await supabase
           .from("maps")
@@ -256,7 +264,7 @@ const MapEditor = ({ mapId }) => {
             edges: serializeJSONField(newEdges),
             name: mapName || "Untitled Map",
             description: mapDescription || "",
-            last_edited: new Date().toISOString(),
+            last_edited: updatedAt,
             node_notes: serializeJSONField(nodeNotes),
             node_data: serializeJSONField(nodeData),
           })
@@ -269,143 +277,103 @@ const MapEditor = ({ mapId }) => {
           prevEdgesRef.current = newEdges;
           prevNodeNotesRef.current = nodeNotes;
           prevNodeDataRef.current = nodeData;
+          setLastEdited(new Date(updatedAt).toLocaleString());
+
+          // Broadcast to other clients via socket
+          socket.emit("map:update", {
+            mapId,
+            nodes: newNodes,
+            edges: newEdges,
+            nodeNotes,
+            nodeData,
+            mapName: mapName || "Untitled Map",
+            mapDescription: mapDescription || "",
+            lastEdited: updatedAt,
+            updatedBy: currentUserId,
+          });
         }
       } catch (error) {
         console.error("❌ Unexpected error in updateSupabase:", error);
       }
     },
-    [mapId, mapName, mapDescription, nodeNotes, nodeData]
+    [
+      mapId,
+      mapName,
+      mapDescription,
+      nodeNotes,
+      nodeData,
+      currentUserId,
+    ]
   );
 
-  // ================== Cursor logic ==================
+  // ================== Cursor logic (socket only) ==================
 
   useEffect(() => {
-    if (!currentUserId || !mapId) return;
+    if (!currentUserId || !mapId || !userProfile) return;
+    if (!reactFlowWrapper.current) return;
 
-    const updateCursor = async (x, y) => {
-      try {
-        const username =
-          userProfile?.username ||
-          authUser?.email ||
-          authUser?.id ||
-          "";
+    const username =
+      userProfile.username ||
+      userProfile.full_name ||
+      userProfile.email ||
+      "Anonymous";
 
-        const { error } = await supabase.from("cursors").upsert(
-          {
-            user_id: currentUserId,
-            map_id: mapId,
-            x,
-            y,
-            username,
-            color: "#4CAF50",
-            last_updated: new Date().toISOString(),
-          },
-          { onConflict: "user_id,map_id" }
-        );
-
-        if (error) throw error;
-
-        // Update own cursor locally immediately
-        setCursors((prev) => ({
-          ...prev,
-          [currentUserId]: {
-            ...(prev[currentUserId] || {}),
-            user_id: currentUserId,
-            map_id: mapId,
-            x,
-            y,
-            username,
-            color: "#4CAF50",
-          },
-        }));
-      } catch (error) {
-        console.error("Cursor update error:", error);
-      }
-    };
+    const wrapperEl = reactFlowWrapper.current;
 
     const handleMouseMove = (e) => {
-      if (!reactFlowWrapper.current) return;
-      const bounds = reactFlowWrapper.current.getBoundingClientRect();
+      const bounds = wrapperEl.getBoundingClientRect();
       const x = e.clientX - bounds.left;
       const y = e.clientY - bounds.top;
-      localCursorRef.current = { x, y };
+
+      const payload = {
+        mapId,
+        userId: currentUserId,
+        x,
+        y,
+        username,
+        color: "#4CAF50",
+      };
+
+      // Update local cursor
+      setCursors((prev) => ({
+        ...prev,
+        [currentUserId]: payload,
+      }));
+
+      // Send to server
+      socket.emit("cursor:move", payload);
     };
 
-    document.addEventListener("mousemove", handleMouseMove);
+    wrapperEl.addEventListener("mousemove", handleMouseMove);
 
-    // Single interval that always uses latest ref
-    cursorUpdateInterval.current = setInterval(async () => {
-      const { x, y } = localCursorRef.current;
-      await updateCursor(x, y);
-    }, 800); // smooth-ish update
+    const handleCursorUpdate = (payload) => {
+      if (payload.mapId !== mapId) return;
+
+      setCursors((prev) => ({
+        ...prev,
+        [payload.userId]: payload,
+      }));
+    };
+
+    socket.on("cursor:update", handleCursorUpdate);
 
     return () => {
-      clearInterval(cursorUpdateInterval.current);
-      document.removeEventListener("mousemove", handleMouseMove);
+      wrapperEl.removeEventListener("mousemove", handleMouseMove);
+      socket.off("cursor:update", handleCursorUpdate);
     };
-  }, [currentUserId, mapId, userProfile, authUser]);
-
-  useEffect(() => {
-    if (!mapId) return;
-
-    const fetchCursors = async () => {
-      const { data, error } = await supabase
-        .from("cursors")
-        .select("*")
-        .eq("map_id", mapId);
-
-      if (!error && data) {
-        const cursorsMap = {};
-        data.forEach((cursor) => {
-          cursorsMap[cursor.user_id] = cursor;
-        });
-        setCursors(cursorsMap);
-      }
-    };
-
-    fetchCursors();
-
-    const subscription = supabase
-      .channel("cursor_changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "cursors",
-          filter: `map_id=eq.${mapId}`,
-        },
-        (payload) => {
-          setCursors((prev) => {
-            const newCursors = { ...prev };
-            if (payload.eventType === "DELETE") {
-              delete newCursors[payload.old.user_id];
-            } else {
-              newCursors[payload.new.user_id] = payload.new;
-            }
-            return newCursors;
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(subscription);
-    };
-  }, [mapId]);
+  }, [currentUserId, mapId, userProfile]);
 
   const renderCursors = () => {
     if (!reactFlowWrapper.current) return null;
 
     return Object.values(cursors).map((cursor) => {
-      if (!cursor || cursor.x === undefined || cursor.y === undefined) return null;
+      if (!cursor || cursor.x == null || cursor.y == null) return null;
 
-      const isYou = cursor.user_id === currentUserId;
-      const color = isYou ? "#4CAF50" : "#2C5F2D";
+      const color = cursor.color || "#2C5F2D";
 
       return (
         <div
-          key={cursor.user_id}
+          key={cursor.userId}
           style={{
             position: "absolute",
             left: `${cursor.x}px`,
@@ -425,8 +393,7 @@ const MapEditor = ({ mapId }) => {
               whiteSpace: "nowrap",
             }}
           >
-            {/* REAL USERNAME ONLY */}
-            {cursor.username || cursor.user_id}
+            {cursor.username || "Anonymous"}
           </div>
           <div
             style={{
@@ -434,7 +401,7 @@ const MapEditor = ({ mapId }) => {
               height: "12px",
               background: color,
               borderRadius: "50%",
-              border: isYou ? "2px solid white" : "none",
+              border: "2px solid white",
               margin: "0 auto",
             }}
           />
@@ -448,7 +415,9 @@ const MapEditor = ({ mapId }) => {
   useEffect(() => {
     const fetchNodeCreators = async () => {
       const creatorIds = [
-        ...new Set(nodes.map((n) => n.creator).filter((c) => c && c !== "unknown")),
+        ...new Set(
+          nodes.map((n) => n.creator).filter((c) => c && c !== "unknown")
+        ),
       ];
       if (creatorIds.length === 0) return;
 
@@ -533,12 +502,46 @@ const MapEditor = ({ mapId }) => {
     );
   };
 
+
+  // // Make sure the current user is in the participants table for this map
+  // useEffect(() => {
+  //   const ensureParticipantRow = async () => {
+  //     if (!mapId || !currentUserId || !userProfile?.username) return;
+
+  //     try {
+  //       const { error } = await supabase
+  //         .from("participants")
+  //         .upsert(
+  //           {
+  //             id: currentUserId,          // user id
+  //             map_id: mapId,              // current map
+  //             name: userProfile.username, // show real username
+  //             status: "online",
+  //           },
+  //           {
+  //             onConflict: "id,map_id",    // composite PK
+  //           }
+  //         );
+
+  //       if (error) {
+  //         console.error("Error upserting participant:", error.message);
+  //       } else {
+  //         console.log("Participant row ensured for", currentUserId, "on map", mapId);
+  //       }
+  //     } catch (err) {
+  //       console.error("Unexpected error upserting participant:", err);
+  //     }
+  //   };
+
+  //   ensureParticipantRow();
+  // }, [mapId, currentUserId, userProfile?.username]);
+
+
   // ================== Handlers: edges & nodes ==================
 
   const onEdgeDoubleClick = useCallback((event, edge) => {
     event.preventDefault();
     setSelectedEdge(edge);
-    setEdgeLabel(edge.label || "");
   }, []);
 
   useEffect(() => {
@@ -625,10 +628,6 @@ const MapEditor = ({ mapId }) => {
             updateSupabase(nodes, updatedEdges);
             return updatedEdges;
           });
-          socket.emit("edge-added", {
-            ...params,
-            markerEnd: { type: "arrowclosed" },
-          });
         }
       );
 
@@ -645,10 +644,6 @@ const MapEditor = ({ mapId }) => {
             );
             updateSupabase(nodes, updatedEdges);
             return updatedEdges;
-          });
-          socket.emit("edge-added", {
-            ...params,
-            style: { strokeDasharray: "5,5" },
           });
         }
       );
@@ -671,7 +666,6 @@ const MapEditor = ({ mapId }) => {
             updateSupabase(nodes, updatedEdges);
             return updatedEdges;
           });
-          socket.emit("edge-added", { ...params });
         }
       );
 
@@ -703,7 +697,7 @@ const MapEditor = ({ mapId }) => {
 
   const onContextMenu = useCallback((event) => {
     event.preventDefault();
-    const reactFlowBounds = event.target.getBoundingClientRect();
+    const reactFlowBounds = event.currentTarget.getBoundingClientRect();
     const x = event.clientX - reactFlowBounds.left;
     const y = event.clientY - reactFlowBounds.top;
     setContextMenu({ x, y });
@@ -749,7 +743,7 @@ const MapEditor = ({ mapId }) => {
         return updatedNodes;
       });
     },
-    [edges, updateSupabase]
+    [edges, updateSupabase, setNodes]
   );
 
   const handleEdgeChanges = useCallback(
@@ -760,7 +754,7 @@ const MapEditor = ({ mapId }) => {
         return updatedEdges;
       });
     },
-    [nodes, updateSupabase]
+    [nodes, updateSupabase, setEdges]
   );
 
   const addNode = useCallback(
@@ -789,7 +783,6 @@ const MapEditor = ({ mapId }) => {
       });
 
       setNodeId((id) => id + 1);
-      socket.emit("node-added", newNode);
 
       if (currentUser) {
         const { data: userData } = await supabase
@@ -803,7 +796,7 @@ const MapEditor = ({ mapId }) => {
         }
       }
     },
-    [nodes, edges, updateSupabase, borderColor]
+    [nodes, edges, updateSupabase, borderColor, setNodes]
   );
 
   const onNodeDoubleClick = useCallback((event, node) => {
@@ -812,7 +805,7 @@ const MapEditor = ({ mapId }) => {
         n.id === node.id ? { ...n, data: { ...n.data, isEditing: true } } : n
       )
     );
-  }, []);
+  }, [setNodes]);
 
   const handleLabelChange = (event, nodeId) => {
     const newLabel = event.target.value;
@@ -823,27 +816,13 @@ const MapEditor = ({ mapId }) => {
     );
   };
 
-  const handleedgeLabelChange = (event) => {
-    setEdgeLabel(event.target.value);
-  };
-
-  const saveEdgeLabel = () => {
-    if (selectedEdge) {
-      setEdges((eds) =>
-        eds.map((edge) =>
-          edge.id === selectedEdge.id ? { ...edge, label: edgeLabel } : edge
-        )
-      );
-      setSelectedEdge(null);
-    }
-  };
-
   const handleLabelBlur = (nodeId) => {
     setNodes((nds) =>
       nds.map((n) =>
         n.id === nodeId ? { ...n, data: { ...n.data, isEditing: false } } : n
       )
     );
+    updateSupabase(nodes, edges);
   };
 
   const onDelete = useCallback(() => {
@@ -857,10 +836,9 @@ const MapEditor = ({ mapId }) => {
     setEdges(remainingEdges);
     setSelectedElements([]);
     updateSupabase(remainingNodes, remainingEdges);
-    socket.emit("elements-deleted", selectedElements);
-  }, [nodes, edges, selectedElements, updateSupabase]);
+  }, [nodes, edges, selectedElements, updateSupabase, setNodes, setEdges]);
 
-  // ================== Fetch map data (JSON parse) ==================
+  // ================== Fetch map data (initial only) ==================
 
   useEffect(() => {
     const fetchMapData = async () => {
@@ -882,134 +860,55 @@ const MapEditor = ({ mapId }) => {
         const parsedEdges = parseJSONField(mapData.edges, []);
         const parsedNotes = parseJSONField(mapData.node_notes, {});
         const parsedData = parseJSONField(mapData.node_data, {});
-        const mapParticipants = Array.isArray(mapData.participants)
-          ? mapData.participants
-          : [];
 
-        setParticipants(mapParticipants);
-
-        if (
-          !prevMapDataRef.current ||
-          JSON.stringify(prevMapDataRef.current.nodes) !==
-            JSON.stringify(mapData.nodes) ||
-          JSON.stringify(prevMapDataRef.current.edges) !==
-            JSON.stringify(mapData.edges) ||
-          prevMapDataRef.current.name !== mapData.name ||
-          prevMapDataRef.current.description !== mapData.description ||
-          JSON.stringify(prevMapDataRef.current.node_notes) !==
-            JSON.stringify(mapData.node_notes) ||
-          JSON.stringify(prevMapDataRef.current.node_data) !==
-            JSON.stringify(mapData.node_data)
-        ) {
-          setNodes(parsedNodes || []);
-          setEdges(parsedEdges || []);
-          setMapName(mapData.name || "");
-          setMapDescription(mapData.description || "");
-          setNodeNotes(parsedNotes || {});
-          setNodeData(parsedData || {});
-          setLastEdited(
-            mapData.last_edited
-              ? new Date(mapData.last_edited).toLocaleString()
-              : "Not available"
-          );
-          setMapCreator(mapData.creator || "Unknown");
-          prevMapDataRef.current = mapData;
-        }
+        setNodes(parsedNodes || []);
+        setEdges(parsedEdges || []);
+        setMapName(mapData.name || "");
+        setMapDescription(mapData.description || "");
+        setNodeNotes(parsedNotes || {});
+        setNodeData(parsedData || {});
+        setLastEdited(
+          mapData.last_edited
+            ? new Date(mapData.last_edited).toLocaleString()
+            : "Not available"
+        );
+        setMapCreator(mapData.creator || "Unknown");
+        prevMapDataRef.current = mapData;
       }
     };
 
     fetchMapData();
+  }, [mapId, setNodes, setEdges]);
 
-    // realtime subscription
-    const subscription = supabase
-      .channel("map_changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "maps",
-          filter: `id=eq.${mapId}`,
-        },
-        (payload) => {
-          const raw = payload.new;
-
-          const parsedNodes = parseJSONField(raw.nodes, []);
-          const parsedEdges = parseJSONField(raw.edges, []);
-          const parsedNotes = parseJSONField(raw.node_notes, {});
-          const parsedData = parseJSONField(raw.node_data, {});
-          const mapParticipants = Array.isArray(raw.participants)
-            ? raw.participants
-            : [];
-
-          setNodes(parsedNodes || []);
-          setEdges(parsedEdges || []);
-          setMapName(raw.name || "");
-          setMapDescription(raw.description || "");
-          setNodeNotes(parsedNotes || {});
-          setNodeData(parsedData || {});
-          setParticipants(mapParticipants);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(subscription);
-    };
-  }, [mapId]);
-
-  // ================== Ensure current user is in participants ==================
+  // ================== Socket: listen for map:updated ==================
 
   useEffect(() => {
-    if (!mapId || !currentUserId) return;
+    if (!mapId) return;
 
-    const ensureParticipant = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("maps")
-          .select("participants")
-          .eq("id", mapId)
-          .single();
+    const handleMapUpdated = (payload) => {
+      if (payload.mapId !== mapId) return;
 
-        if (error) {
-          console.error("Failed to load participants:", error);
-          return;
-        }
+      // If you want to ignore your own updates:
+      // if (payload.updatedBy === currentUserId) return;
 
-        let existing = [];
-        if (Array.isArray(data.participants)) {
-          existing = data.participants;
-        } else if (typeof data.participants === "string") {
-          try {
-            existing = JSON.parse(data.participants);
-          } catch {
-            existing = [];
-          }
-        }
-
-        if (!existing.includes(currentUserId)) {
-          const updated = [...existing, currentUserId];
-          const { error: updateError } = await supabase
-            .from("maps")
-            .update({ participants: updated })
-            .eq("id", mapId);
-
-          if (updateError) {
-            console.error("Failed to update participants:", updateError);
-            return;
-          }
-
-          setParticipants(updated);
-        } else {
-          setParticipants(existing);
-        }
-      } catch (err) {
-        console.error("Unexpected error ensuring participant:", err);
+      setNodes(payload.nodes || []);
+      setEdges(payload.edges || []);
+      setNodeNotes(payload.nodeNotes || {});
+      setNodeData(payload.nodeData || {});
+      if (payload.mapName !== undefined) setMapName(payload.mapName);
+      if (payload.mapDescription !== undefined)
+        setMapDescription(payload.mapDescription);
+      if (payload.lastEdited) {
+        setLastEdited(new Date(payload.lastEdited).toLocaleString());
       }
     };
 
-    ensureParticipant();
-  }, [mapId, currentUserId]);
+    socket.on("map:updated", handleMapUpdated);
+
+    return () => {
+      socket.off("map:updated", handleMapUpdated);
+    };
+  }, [mapId, setNodes, setEdges]);
 
   // ================== Keyboard shortcuts ==================
 
@@ -1102,7 +1001,12 @@ const MapEditor = ({ mapId }) => {
           >
             <p>Keyboard Shortcuts:</p>
             <ul
-              style={{ margin: 0, padding: 0, listStyle: "none", fontSize: "10px" }}
+              style={{
+                margin: 0,
+                padding: 0,
+                listStyle: "none",
+                fontSize: "10px",
+              }}
             >
               <li>
                 <strong>N:</strong> Add a new node
@@ -1123,7 +1027,8 @@ const MapEditor = ({ mapId }) => {
                 <strong>Click on edge:</strong> open edge details
               </li>
               <li>
-                <strong>Click on the background:</strong> close node\edge details
+                <strong>Click on the background:</strong> close node\edge
+                details
               </li>
             </ul>
             <p>Total Nodes: {nodes.length}</p>
@@ -1158,6 +1063,7 @@ const MapEditor = ({ mapId }) => {
 
         {renderCursors()}
 
+        {/* Edge details panel */}
         {showEdgeDetails && selectedEdge && (
           <div
             ref={edgeDetailsPanelRef}
@@ -1173,7 +1079,9 @@ const MapEditor = ({ mapId }) => {
               overflowY: "auto",
               boxShadow: "0 4px 10px rgba(0, 0, 0, 0.2)",
               borderRadius: "8px 0 0 8px",
-              transform: showEdgeDetails ? "translateX(0)" : "translateX(100%)",
+              transform: showEdgeDetails
+                ? "translateX(0)"
+                : "translateX(100%)",
               transition: "transform 0.3s ease-in-out",
               fontFamily: "'Arial', sans-serif",
             }}
@@ -1224,7 +1132,11 @@ const MapEditor = ({ mapId }) => {
                       : edge
                   );
                   setEdges(updatedEdges);
-                  setSelectedEdge({ ...selectedEdge, label: e.target.value });
+                  setSelectedEdge({
+                    ...selectedEdge,
+                    label: e.target.value,
+                  });
+                  updateSupabase(nodes, updatedEdges);
                 }}
                 style={{
                   width: "100%",
@@ -1263,8 +1175,12 @@ const MapEditor = ({ mapId }) => {
                   setEdges(updatedEdges);
                   setSelectedEdge({
                     ...selectedEdge,
-                    style: { ...selectedEdge.style, stroke: e.target.value },
+                    style: {
+                      ...selectedEdge.style,
+                      stroke: e.target.value,
+                    },
                   });
+                  updateSupabase(nodes, updatedEdges);
                 }}
                 style={{
                   width: "100%",
@@ -1305,6 +1221,7 @@ const MapEditor = ({ mapId }) => {
                       style: { strokeDasharray: undefined },
                       markerEnd: undefined,
                     });
+                    updateSupabase(nodes, updatedEdges);
                   }}
                   style={{
                     width: "100%",
@@ -1353,6 +1270,7 @@ const MapEditor = ({ mapId }) => {
                       style: { strokeDasharray: "5,5" },
                       markerEnd: undefined,
                     });
+                    updateSupabase(nodes, updatedEdges);
                   }}
                   style={{
                     width: "100%",
@@ -1404,6 +1322,7 @@ const MapEditor = ({ mapId }) => {
                       markerEnd: { type: "arrowclosed" },
                       style: { strokeDasharray: undefined },
                     });
+                    updateSupabase(nodes, updatedEdges);
                   }}
                   style={{
                     width: "100%",
@@ -1576,6 +1495,7 @@ const MapEditor = ({ mapId }) => {
         </div>
 
         {currentUserId && (
+          // <ParticipantList mapId={mapId} currentUserId={currentUserId} />
           <ParticipantBox mapId={mapId} currentUserId={currentUserId} />
         )}
       </div>
@@ -1847,4 +1767,3 @@ const MapEditorWithParams = ({ mapId }) => (
 );
 
 export default MapEditorWithParams;
-  

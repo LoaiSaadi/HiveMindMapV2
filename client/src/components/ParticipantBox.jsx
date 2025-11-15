@@ -1,122 +1,140 @@
 import React, { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
-import io from "socket.io-client";
+import { supabase } from "../supabase";
 
-
-const supabase = createClient(
-  process.env.REACT_APP_SUPABASE_URL,
-  process.env.REACT_APP_SUPABASE_ANON_KEY
-);
-
-
-const socket = io("http://localhost:5000");
-
+/**
+ * Shows the participants for a given map based on the `participants` array
+ * on the `maps` table, and joins that with `users.username`.
+ */
 const ParticipantBox = ({ mapId, currentUserId }) => {
-  const [participants, setParticipants] = useState([]);
-  const [userDetails, setUserDetails] = useState({});
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchMapParticipants = async () => {
-      const { data: mapData, error } = await supabase
+  const fetchParticipants = async () => {
+    if (!mapId) return;
+
+    try {
+      setLoading(true);
+
+      // 1. Get participants array from the maps table
+      const { data: mapRow, error: mapError } = await supabase
         .from("maps")
         .select("participants")
         .eq("id", mapId)
         .single();
 
-      if (error || !mapData) {
-        console.error("Error fetching map participants:", error);
+      if (mapError) {
+        console.error("Error fetching map participants:", mapError);
+        setUsers([]);
         return;
       }
 
-      const participantIds = mapData.participants || [];
+      const participantIds = Array.isArray(mapRow?.participants)
+        ? mapRow.participants
+        : [];
 
-      setParticipants(
-        participantIds.map((id) => ({
-          id,
-          online: id === currentUserId, // current user is online
-        }))
-      );
+      if (participantIds.length === 0) {
+        setUsers([]);
+        return;
+      }
 
-      // Fetch user details
-      const { data: users, error: usersError } = await supabase
+      // 2. Get usernames for those IDs from users table
+      const { data: usersData, error: usersError } = await supabase
         .from("users")
         .select("id, username")
         .in("id", participantIds);
 
       if (usersError) {
         console.error("Error fetching user details:", usersError);
+        setUsers([]);
         return;
       }
 
-      const userMap = {};
-      users.forEach((user) => {
-        userMap[user.id] = user;
-      });
-      setUserDetails(userMap);
+      // keep the order roughly by the array, so creator appears first
+      const userMap = new Map(usersData.map((u) => [u.id, u]));
+      const ordered = participantIds
+        .map((id) => userMap.get(id))
+        .filter(Boolean);
 
-      // Emit join-map after we know the user's username
-      const currentUser = userMap[currentUserId];
-      if (currentUser) {
-        socket.emit("join-map", {
-          userId: currentUserId,
-          username: currentUser.username || "Unknown User",
-          mapId,
-        });
-      }
-    };
+      setUsers(ordered);
+    } catch (err) {
+      console.error("Unexpected error in fetchParticipants:", err);
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchMapParticipants();
+  useEffect(() => {
+    if (!mapId) return;
 
-    // Listen for real-time participant status updates
-    socket.on("participant-status", (updatedParticipants) => {
-      setParticipants((prev) =>
-        prev.map((participant) => ({
-          ...participant,
-          online: updatedParticipants[participant.id]?.online || false,
-        }))
-      );
-    });
+    // initial load
+    fetchParticipants();
+
+    // realtime: whenever the maps row for this map changes, re-fetch participants
+    const channel = supabase
+      .channel(`map-participants-${mapId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "maps",
+          filter: `id=eq.${mapId}`,
+        },
+        () => {
+          fetchParticipants();
+        }
+      )
+      .subscribe();
 
     return () => {
-      socket.off("participant-status");
+      supabase.removeChannel(channel);
     };
-  }, [mapId, currentUserId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapId]);
+
+  const total = users.length;
 
   return (
-    <div style={{ marginTop: "20px", padding: "10px", border: "1px solid #ddd", borderRadius: "8px" }}>
-      <h4>Participants ({participants.length} Total)</h4>
-      <ul style={{ listStyleType: "none", padding: 0 }}>
-        {participants.map((participant) => {
-          const user = userDetails[participant.id] || {};
-          return (
+    <div
+      style={{
+        marginTop: "20px",
+        padding: "10px",
+        border: "1px solid #ddd",
+        borderRadius: "8px",
+        background: "#ffffff",
+      }}
+    >
+      <h4 style={{ margin: "0 0 8px 0" }}>
+        Participants ({total} Total)
+      </h4>
+
+      {loading ? (
+        <p style={{ fontSize: "0.9rem" }}>Loading...</p>
+      ) : total === 0 ? (
+        <p style={{ fontSize: "0.9rem" }}>No participants yet.</p>
+      ) : (
+        <ul style={{ listStyleType: "none", padding: 0, margin: 0 }}>
+          {users.map((u) => (
             <li
-              key={participant.id}
+              key={u.id}
               style={{
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                padding: "5px 0",
+                padding: "4px 0",
                 borderBottom: "1px solid #eee",
+                fontSize: "0.9rem",
               }}
             >
               <span>
-                {user.username || participant.name || "Unknown User"}
-                {participant.id === currentUserId ? " (Me)" : ""}
+                {u.username || "Unknown user"}
+                {u.id === currentUserId ? " (You)" : ""}
               </span>
-              {/* <img
-                src={user.profile_picture || "/default-profile.png"}
-                alt={`${user.username || "Unknown User"}'s profile`}
-                style={{
-                  width: "50px",
-                  height: "50px",
-                  borderRadius: "50%",
-                  objectFit: "cover",
-                }}
-              /> */}
             </li>
-          );
-        })}
-      </ul>
+          ))}
+        </ul>
+      )}
     </div>
   );
 };
@@ -126,108 +144,103 @@ export default ParticipantBox;
 
 
 
-
-
+// // src/components/ParticipantBox.jsx
 // import React, { useEffect, useState } from "react";
-// import { doc, onSnapshot, getDoc } from "firebase/firestore";
-// import { db } from "../firebase";
-// import io from "socket.io-client";
+// import { supabase } from "../supabase";
 
-// const socket = io("http://localhost:5000");
-
-// const ParticipantBox = ({ mapId, currentUserId }) => {
-//   const [participants, setParticipants] = useState([]);
-//   const [userDetails, setUserDetails] = useState({});
+// /**
+//  * Shows the participants for a given map.
+//  *
+//  * We DON'T read the map row here anymore. Instead, MapEditor passes us
+//  * the participantIds it already has from the `maps` table.
+//  */
+// const ParticipantBox = ({ mapId, currentUserId, participantIds }) => {
+//   const [users, setUsers] = useState([]);
+//   const [loading, setLoading] = useState(true);
 
 //   useEffect(() => {
-//     const mapRef = doc(db, "maps", mapId);
+//     const ids = Array.isArray(participantIds) ? participantIds : [];
 
-//     // Fetch participants from the map document
-//     const unsubscribe = onSnapshot(mapRef, (docSnapshot) => {
-//       if (docSnapshot.exists()) {
-//         const mapData = docSnapshot.data();
-//         const participantIds = mapData.participants || [];
-//         setParticipants(
-//           participantIds.map((id) => ({
-//             id,
-//             online: id === currentUserId, // Set current user to online
-//           }))
-//         );
-
-//         // Fetch user details for each participant
-//         participantIds.forEach(async (userId) => {
-//           const userDoc = await getDoc(doc(db, "users", userId));
-//           if (userDoc.exists()) {
-//             setUserDetails((prev) => ({
-//               ...prev,
-//               [userId]: userDoc.data(),
-//             }));
-//           }
-//         });
-//       }
-//     });
-
-//     // Emit join-map for the current user
-//     if (currentUserId && userDetails[currentUserId]) {
-//       socket.emit("join-map", {
-//         userId: currentUserId,
-//         username: userDetails[currentUserId]?.username || "Unknown User",
-//         mapId,
-//       });
+//     if (!mapId || ids.length === 0) {
+//       setUsers([]);
+//       setLoading(false);
+//       return;
 //     }
 
-//     // Listen for real-time participant status updates
-//     socket.on("participant-status", (updatedParticipants) => {
-//       setParticipants((prev) =>
-//         prev.map((participant) => ({
-//           ...participant,
-//           online: updatedParticipants[participant.id]?.online || false,
-//         }))
-//       );
-//     });
+//     const fetchUsers = async () => {
+//       try {
+//         setLoading(true);
 
-//     return () => {
-//       unsubscribe();
-//       socket.off("participant-status");
+//         const { data, error } = await supabase
+//           .from("users")
+//           .select("id, username")
+//           .in("id", ids);
+
+//         if (error) {
+//           console.error("Error fetching participant usernames:", error);
+//           setUsers([]);
+//           return;
+//         }
+
+//         // keep order according to ids array
+//         const byId = new Map((data || []).map((u) => [u.id, u]));
+//         const ordered = ids.map((id) => byId.get(id)).filter(Boolean);
+
+//         setUsers(ordered);
+//       } catch (err) {
+//         console.error("Unexpected error in ParticipantBox:", err);
+//         setUsers([]);
+//       } finally {
+//         setLoading(false);
+//       }
 //     };
-//   }, [mapId, currentUserId, userDetails]);
+
+//     fetchUsers();
+//     // eslint-disable-next-line react-hooks/exhaustive-deps
+//   }, [mapId, JSON.stringify(participantIds)]);
+
+//   const total = users.length;
 
 //   return (
-//     <div style={{ marginTop: "20px", padding: "10px", border: "1px solid #ddd", borderRadius: "8px" }}>
-//       <h4>Participants ({participants.length} Total)</h4>
-//       <ul style={{ listStyleType: "none", padding: 0 }}>
-//         {participants.map((participant) => {
-//           const user = userDetails[participant.id] || {};
-//           return (
+//     <div
+//       style={{
+//         marginTop: "20px",
+//         padding: "10px",
+//         border: "1px solid #ddd",
+//         borderRadius: "8px",
+//         background: "#ffffff",
+//       }}
+//     >
+//       <h4 style={{ margin: "0 0 8px 0" }}>
+//         Participants ({total} Total)
+//       </h4>
+
+//       {loading ? (
+//         <p style={{ fontSize: "0.9rem" }}>Loading...</p>
+//       ) : total === 0 ? (
+//         <p style={{ fontSize: "0.9rem" }}>No participants yet.</p>
+//       ) : (
+//         <ul style={{ listStyleType: "none", padding: 0, margin: 0 }}>
+//           {users.map((u) => (
 //             <li
-//               key={participant.id}
+//               key={u.id}
 //               style={{
 //                 display: "flex",
 //                 justifyContent: "space-between",
 //                 alignItems: "center",
-//                 padding: "5px 0",
+//                 padding: "4px 0",
 //                 borderBottom: "1px solid #eee",
+//                 fontSize: "0.9rem",
 //               }}
 //             >
 //               <span>
-//                 {user.username || participant.name || "Unknown User"}
-//                 {participant.id === currentUserId ? " (Me)" : ""}
+//                 {u.username || "Unknown user"}
+//                 {u.id === currentUserId ? " (You)" : ""}
 //               </span>
-//               <img
-//                 src={user.profilePicture || "/default-profile.png"} // Use Base64 string directly
-//                 alt={`${user.username || "Unknown User"}'s profile`}
-//                 className="profile-picture"
-//                 style={{
-//                   width: "50px",
-//                   height: "50px",
-//                   borderRadius: "50%", // Circular profile pictures
-//                   objectFit: "cover", // Ensure aspect ratio is maintained
-//                 }}
-//               />
 //             </li>
-//           );
-//         })}
-//       </ul>
+//           ))}
+//         </ul>
+//       )}
 //     </div>
 //   );
 // };
