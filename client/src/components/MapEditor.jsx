@@ -148,6 +148,9 @@ const MapEditor = ({ mapId }) => {
   // -------- Cursors (socket-only) --------
   const [cursors, setCursors] = useState({}); // { userId: { x, y, username, color } }
 
+  // -------- Live participants from socket --------
+  const [liveParticipants, setLiveParticipants] = useState([]);
+
   // -------- React Flow --------
   const [nodes, setNodes] = useNodesState(initialNodes);
   const [edges, setEdges] = useEdgesState(initialEdges);
@@ -248,6 +251,23 @@ const MapEditor = ({ mapId }) => {
     console.log("join-map sent:", payload);
     socket.emit("join-map", payload);
   }, [currentUserId, mapId, userProfile]);
+
+  // ================== listen to participants:update (socket) ==================
+  useEffect(() => {
+    if (!mapId) return;
+
+    const handleParticipantsUpdate = (payload) => {
+      if (!payload || payload.mapId !== mapId) return;
+      setLiveParticipants(payload.participants || []);
+      console.log("participants:update received:", payload);
+    };
+
+    socket.on("participants:update", handleParticipantsUpdate);
+
+    return () => {
+      socket.off("participants:update", handleParticipantsUpdate);
+    };
+  }, [mapId]);
 
   // ================== Supabase UPDATE + socket broadcast ==================
 
@@ -501,41 +521,6 @@ const MapEditor = ({ mapId }) => {
       </div>
     );
   };
-
-
-  // // Make sure the current user is in the participants table for this map
-  // useEffect(() => {
-  //   const ensureParticipantRow = async () => {
-  //     if (!mapId || !currentUserId || !userProfile?.username) return;
-
-  //     try {
-  //       const { error } = await supabase
-  //         .from("participants")
-  //         .upsert(
-  //           {
-  //             id: currentUserId,          // user id
-  //             map_id: mapId,              // current map
-  //             name: userProfile.username, // show real username
-  //             status: "online",
-  //           },
-  //           {
-  //             onConflict: "id,map_id",    // composite PK
-  //           }
-  //         );
-
-  //       if (error) {
-  //         console.error("Error upserting participant:", error.message);
-  //       } else {
-  //         console.log("Participant row ensured for", currentUserId, "on map", mapId);
-  //       }
-  //     } catch (err) {
-  //       console.error("Unexpected error upserting participant:", err);
-  //     }
-  //   };
-
-  //   ensureParticipantRow();
-  // }, [mapId, currentUserId, userProfile?.username]);
-
 
   // ================== Handlers: edges & nodes ==================
 
@@ -799,13 +784,16 @@ const MapEditor = ({ mapId }) => {
     [nodes, edges, updateSupabase, borderColor, setNodes]
   );
 
-  const onNodeDoubleClick = useCallback((event, node) => {
-    setNodes((nds) =>
-      nds.map((n) =>
-        n.id === node.id ? { ...n, data: { ...n.data, isEditing: true } } : n
-      )
-    );
-  }, [setNodes]);
+  const onNodeDoubleClick = useCallback(
+    (event, node) => {
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === node.id ? { ...n, data: { ...n.data, isEditing: true } } : n
+        )
+      );
+    },
+    [setNodes]
+  );
 
   const handleLabelChange = (event, nodeId) => {
     const newLabel = event.target.value;
@@ -1495,8 +1483,10 @@ const MapEditor = ({ mapId }) => {
         </div>
 
         {currentUserId && (
-          // <ParticipantList mapId={mapId} currentUserId={currentUserId} />
-          <ParticipantBox mapId={mapId} currentUserId={currentUserId} />
+          <ParticipantBox
+            currentUserId={currentUserId}
+            liveParticipants={liveParticipants}
+          />
         )}
       </div>
 

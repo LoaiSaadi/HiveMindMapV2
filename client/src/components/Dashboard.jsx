@@ -242,138 +242,310 @@ const Dashboard = ({ user }) => {
   // NEW joinMap – adds user to maps.participants and
   // opens the editor immediately
   // -------------------------------------------------------
+  // const joinMap = async (e) => {
+  //   e.preventDefault();
+  //   setJoinSuccessMessage("");
+  //   setError("");
+
+  //   const trimmedName = joinMapName.trim();
+  //   const trimmedId = joinMapId.trim();
+
+  //   if (!trimmedName || !trimmedId) {
+  //     setError("Please provide both the map name and ID.");
+  //     return;
+  //   }
+
+  //   try {
+  //     // current logged-in user
+  //     const {
+  //       data: { user: authUser },
+  //       error: authError,
+  //     } = await supabase.auth.getUser();
+
+  //     if (authError || !authUser) {
+  //       console.error("joinMap / auth error:", authError);
+  //       setError("You must be logged in to join a map.");
+  //       return;
+  //     }
+
+  //     // fetch map by ID
+  //     const { data: mapRow, error: mapError } = await supabase
+  //       .from("maps")
+  //       .select("id, name, participants")
+  //       .eq("id", trimmedId)
+  //       .maybeSingle();
+
+  //     console.log("joinMap select result:", { mapRow, mapError });
+
+  //     if (mapError) {
+  //       console.error("Supabase error when fetching map:", mapError);
+  //       setError(
+  //         "An error occurred while trying to join the map. Please try again."
+  //       );
+  //       return;
+  //     }
+
+  //     if (!mapRow) {
+  //       setError("No map found with the provided ID.");
+  //       return;
+  //     }
+
+  //     // name must match
+  //     if (mapRow.name !== trimmedName) {
+  //       setError("The map name does not match the provided ID.");
+  //       return;
+  //     }
+
+  //     const currentParticipants = Array.isArray(mapRow.participants)
+  //       ? mapRow.participants
+  //       : [];
+
+  //     // already in the list → just open the map
+  //     if (currentParticipants.includes(authUser.id)) {
+  //       setJoinSuccessMessage("You have already joined this map.");
+  //     } else {
+  //       // merge + dedupe
+  //       const finalParticipants = Array.from(
+  //         new Set([...currentParticipants, authUser.id])
+  //       );
+
+  //       console.log("joinMap finalParticipants (local):", finalParticipants);
+
+  //       // update participants in DB
+  //       const { data: updatedRow, error: updateError } = await supabase
+  //         .from("maps")
+  //         .update({ participants: finalParticipants })
+  //         .eq("id", trimmedId)
+  //         .select("id, participants")
+  //         .maybeSingle();
+
+  //       console.log("joinMap update result:", { updatedRow, updateError });
+
+  //       if (updateError) {
+  //         setError(
+  //           "An error occurred while trying to join the map. Please try again."
+  //         );
+  //         return;
+  //       }
+
+  //       // keep local state in sync so Participant component sees 2 users
+  //       setAllMaps((prev) => {
+  //         const exists = prev.find((m) => m.id === trimmedId);
+  //         if (exists) {
+  //           return prev.map((m) =>
+  //             m.id === trimmedId
+  //               ? { ...m, participants: finalParticipants }
+  //               : m
+  //           );
+  //         }
+  //         return [
+  //           ...prev,
+  //           { id: trimmedId, name: mapRow.name, participants: finalParticipants },
+  //         ];
+  //       });
+
+  //       setMaps((prev) => {
+  //         const exists = prev.find((m) => m.id === trimmedId);
+  //         if (exists) {
+  //           return prev.map((m) =>
+  //             m.id === trimmedId
+  //               ? { ...m, participants: finalParticipants }
+  //               : m
+  //           );
+  //         }
+  //         return [
+  //           ...prev,
+  //           { id: trimmedId, name: mapRow.name, participants: finalParticipants },
+  //         ];
+  //       });
+
+  //       setJoinSuccessMessage("You have successfully joined the map.");
+  //     }
+
+  //     // clear form + open map
+  //     setJoinMapName("");
+  //     setJoinMapId("");
+  //     setIsJoinInputVisible(false);
+  //     setSelectedMapId(trimmedId);
+  //   } catch (err) {
+  //     console.error("Unexpected error in joinMap:", err);
+  //     setError(
+  //       "An error occurred while trying to join the map. Please try again."
+  //     );
+  //   }
+  // };
+
   const joinMap = async (e) => {
-    e.preventDefault();
-    setJoinSuccessMessage("");
-    setError("");
+  e.preventDefault();
+  setJoinSuccessMessage("");
+  setError("");
 
-    const trimmedName = joinMapName.trim();
-    const trimmedId = joinMapId.trim();
+  const trimmedName = joinMapName.trim();
+  const trimmedId = joinMapId.trim();
 
-    if (!trimmedName || !trimmedId) {
-      setError("Please provide both the map name and ID.");
+  if (!trimmedName || !trimmedId) {
+    setError("Please provide both the map name and ID.");
+    return;
+  }
+
+  try {
+    // 1) current logged-in user
+    const {
+      data: { user: authUser },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !authUser) {
+      console.error("joinMap / auth error:", authError);
+      setError("You must be logged in to join a map.");
       return;
     }
 
-    try {
-      // current logged-in user
-      const {
-        data: { user: authUser },
-        error: authError,
-      } = await supabase.auth.getUser();
+    // 2) fetch map by ID
+    const { data: mapRow, error: mapError } = await supabase
+      .from("maps")
+      .select("id, name, participants")
+      .eq("id", trimmedId)
+      .single(); // here single() is fine
 
-      if (authError || !authUser) {
-        console.error("joinMap / auth error:", authError);
-        setError("You must be logged in to join a map.");
-        return;
+    console.log("joinMap select result:", {
+      rawParticipants: mapRow?.participants,
+      type: typeof mapRow?.participants,
+      mapRow,
+      mapError,
+    });
+
+    if (mapError) {
+      console.error("Supabase error when fetching map:", mapError);
+      setError(
+        "An error occurred while trying to join the map. Please try again."
+      );
+      return;
+    }
+
+    if (!mapRow) {
+      setError("No map found with the provided ID.");
+      return;
+    }
+
+    // 3) name must match
+    if ((mapRow.name || "").trim() !== trimmedName) {
+      setError("The map name does not match the provided ID.");
+      return;
+    }
+
+    // 4) normalise participants from DB
+    let currentParticipants = [];
+
+    if (Array.isArray(mapRow.participants)) {
+      currentParticipants = [...mapRow.participants];
+    } else if (
+      mapRow.participants === null ||
+      mapRow.participants === undefined
+    ) {
+      currentParticipants = [];
+    } else if (typeof mapRow.participants === "string") {
+      // handle both JSON string '["uuid"]' and Postgres array '{uuid,uuid}'
+      try {
+        const parsed = JSON.parse(mapRow.participants);
+        if (Array.isArray(parsed)) {
+          currentParticipants = parsed;
+        } else {
+          currentParticipants = [];
+        }
+      } catch {
+        const stripped = mapRow.participants.replace(/[{}"]/g, "");
+        currentParticipants = stripped
+          ? stripped.split(",").map((s) => s.trim())
+          : [];
       }
+    }
 
-      // fetch map by ID
-      const { data: mapRow, error: mapError } = await supabase
+    console.log("joinMap currentParticipants (normalised):", currentParticipants);
+
+    // 5) already in the list → just open the map
+    if (currentParticipants.includes(authUser.id)) {
+      setJoinSuccessMessage("You have already joined this map.");
+    } else {
+      const finalParticipants = Array.from(
+        new Set([...currentParticipants, authUser.id])
+      );
+
+      console.log("joinMap finalParticipants (about to update):", finalParticipants);
+
+      // 6) update participants in DB
+      const { error: updateError } = await supabase
         .from("maps")
-        .select("id, name, participants")
-        .eq("id", trimmedId)
-        .maybeSingle();
+        .update({ participants: finalParticipants })
+        .eq("id", trimmedId);
 
-      console.log("joinMap select result:", { mapRow, mapError });
-
-      if (mapError) {
-        console.error("Supabase error when fetching map:", mapError);
+      if (updateError) {
+        console.error("joinMap update error:", updateError);
         setError(
           "An error occurred while trying to join the map. Please try again."
         );
         return;
       }
 
-      if (!mapRow) {
-        setError("No map found with the provided ID.");
-        return;
-      }
+      // 7) re-fetch row AFTER update to confirm what the DB actually stored
+      const { data: afterRow, error: afterError } = await supabase
+        .from("maps")
+        .select("id, participants")
+        .eq("id", trimmedId)
+        .single();
 
-      // name must match
-      if (mapRow.name !== trimmedName) {
-        setError("The map name does not match the provided ID.");
-        return;
-      }
+      console.log("joinMap participants AFTER update:", {
+        afterRow,
+        afterError,
+      });
 
-      const currentParticipants = Array.isArray(mapRow.participants)
-        ? mapRow.participants
-        : [];
+      // keep local state in sync for the UI list
+      const storedParticipants = Array.isArray(afterRow?.participants)
+        ? afterRow.participants
+        : finalParticipants;
 
-      // already in the list → just open the map
-      if (currentParticipants.includes(authUser.id)) {
-        setJoinSuccessMessage("You have already joined this map.");
-      } else {
-        // merge + dedupe
-        const finalParticipants = Array.from(
-          new Set([...currentParticipants, authUser.id])
-        );
-
-        console.log("joinMap finalParticipants (local):", finalParticipants);
-
-        // update participants in DB
-        const { data: updatedRow, error: updateError } = await supabase
-          .from("maps")
-          .update({ participants: finalParticipants })
-          .eq("id", trimmedId)
-          .select("id, participants")
-          .maybeSingle();
-
-        console.log("joinMap update result:", { updatedRow, updateError });
-
-        if (updateError) {
-          setError(
-            "An error occurred while trying to join the map. Please try again."
+      setAllMaps((prev) => {
+        const exists = prev.find((m) => m.id === trimmedId);
+        if (exists) {
+          return prev.map((m) =>
+            m.id === trimmedId ? { ...m, participants: storedParticipants } : m
           );
-          return;
         }
+        return [
+          ...prev,
+          { id: trimmedId, name: mapRow.name, participants: storedParticipants },
+        ];
+      });
 
-        // keep local state in sync so Participant component sees 2 users
-        setAllMaps((prev) => {
-          const exists = prev.find((m) => m.id === trimmedId);
-          if (exists) {
-            return prev.map((m) =>
-              m.id === trimmedId
-                ? { ...m, participants: finalParticipants }
-                : m
-            );
-          }
-          return [
-            ...prev,
-            { id: trimmedId, name: mapRow.name, participants: finalParticipants },
-          ];
-        });
+      setMaps((prev) => {
+        const exists = prev.find((m) => m.id === trimmedId);
+        if (exists) {
+          return prev.map((m) =>
+            m.id === trimmedId ? { ...m, participants: storedParticipants } : m
+          );
+        }
+        return [
+          ...prev,
+          { id: trimmedId, name: mapRow.name, participants: storedParticipants },
+        ];
+      });
 
-        setMaps((prev) => {
-          const exists = prev.find((m) => m.id === trimmedId);
-          if (exists) {
-            return prev.map((m) =>
-              m.id === trimmedId
-                ? { ...m, participants: finalParticipants }
-                : m
-            );
-          }
-          return [
-            ...prev,
-            { id: trimmedId, name: mapRow.name, participants: finalParticipants },
-          ];
-        });
-
-        setJoinSuccessMessage("You have successfully joined the map.");
-      }
-
-      // clear form + open map
-      setJoinMapName("");
-      setJoinMapId("");
-      setIsJoinInputVisible(false);
-      setSelectedMapId(trimmedId);
-    } catch (err) {
-      console.error("Unexpected error in joinMap:", err);
-      setError(
-        "An error occurred while trying to join the map. Please try again."
-      );
+      setJoinSuccessMessage("You have successfully joined the map.");
     }
-  };
+
+    // clear form + open map
+    setJoinMapName("");
+    setJoinMapId("");
+    setIsJoinInputVisible(false);
+    setSelectedMapId(trimmedId);
+  } catch (err) {
+    console.error("Unexpected error in joinMap:", err);
+    setError(
+      "An error occurred while trying to join the map. Please try again."
+    );
+  }
+};
+
 
   const handleUsernameChange = async (e) => {
     const newUsername = e.target.value;

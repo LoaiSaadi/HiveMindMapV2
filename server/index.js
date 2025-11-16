@@ -104,7 +104,9 @@ io.on("connection", (socket) => {
   //   }
   // });
 
+  // -------- join-map --------
   socket.on("join-map", async ({ mapId, userId, username }) => {
+    console.log("SERVER join-map received:", { mapId, userId, username });
     try {
       if (!mapId || !userId) return;
 
@@ -122,38 +124,29 @@ io.on("connection", (socket) => {
         status: "online",
       };
 
-      // broadcast in-memory participants
+      // Broadcast participants in memory
       io.to(mapId).emit("participants:update", {
         mapId,
         participants: Object.values(participantsByMap[mapId]),
       });
 
-      // --- Persist to Supabase: participants table + maps.participants ---
-      if (!supabaseAdmin) {
-        console.warn(
-          "⚠️ supabaseAdmin not configured – maps.participants won't be updated"
-        );
-      } else {
-        // 1) optional: participants table
+      // Persist in Supabase
+      if (supabaseAdmin) {
         try {
-          await supabaseAdmin.from("participants").upsert(
-            {
-              id: userId,
-              map_id: mapId,
-              name: username || "Anonymous",
-              status: "online",
-            },
-            { onConflict: "id,map_id" }
-          );
-        } catch (err) {
-          console.error(
-            "❌ Supabase upsert(participants) failed:",
-            err.message
-          );
-        }
+          // 1) upsert into participants table
+          await supabaseAdmin
+            .from("participants")
+            .upsert(
+              {
+                id: userId,
+                map_id: mapId,
+                name: username || "Anonymous",
+                status: "online",
+              },
+              { onConflict: "id,map_id" }
+            );
 
-        // 2) update maps.participants array
-        try {
+          // 2) also ensure userId exists in maps.participants
           const { data: mapRow, error: mapError } = await supabaseAdmin
             .from("maps")
             .select("participants")
@@ -162,40 +155,53 @@ io.on("connection", (socket) => {
 
           if (mapError) {
             console.error(
-              "❌ Error fetching map for participants:",
+              "join-map: error fetching map participants:",
               mapError.message
             );
           } else {
-            const current = Array.isArray(mapRow?.participants)
-              ? mapRow.participants
-              : [];
+            let current = [];
+
+            if (Array.isArray(mapRow.participants)) {
+              current = [...mapRow.participants];
+            } else if (typeof mapRow.participants === "string") {
+              // defensive, if somehow stored as JSON string
+              try {
+                const parsed = JSON.parse(mapRow.participants);
+                if (Array.isArray(parsed)) current = parsed;
+              } catch {
+                /* ignore */
+              }
+            }
 
             if (!current.includes(userId)) {
-              const updated = [...current, userId];
+              const updatedParticipants = [...current, userId];
 
-              const { error: updateError } = await supabaseAdmin
+              const { error: mapUpdateError } = await supabaseAdmin
                 .from("maps")
-                .update({ participants: updated })
+                .update({ participants: updatedParticipants })
                 .eq("id", mapId);
 
-              if (updateError) {
+              if (mapUpdateError) {
                 console.error(
-                  "❌ Error updating maps.participants:",
-                  updateError.message
+                  "join-map: failed updating maps.participants:",
+                  mapUpdateError.message
                 );
               } else {
-                console.log("✅ maps.participants updated to:", updated);
+                console.log(
+                  "join-map: maps.participants updated:",
+                  updatedParticipants
+                );
               }
-            } else {
-              console.log("ℹ️ user already in maps.participants");
             }
           }
         } catch (err) {
-          console.error("❌ Supabase admin error in join-map:", err.message);
+          console.error("❌ Supabase upsert/update in join-map failed:", err);
         }
       }
 
-      console.log(`👤 ${username || "Anonymous"} (${userId}) joined map ${mapId}`);
+      console.log(
+        `👤 ${username || "Anonymous"} (${userId}) joined map ${mapId}`
+      );
     } catch (err) {
       console.error("join-map error:", err.message);
     }
